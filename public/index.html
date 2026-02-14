@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GENESIS — AI Civilization on Monad</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <h1>GENESIS</h1>
+    <p class="tagline">Same world. Better outcomes. Why?</p>
+    <span class="cycle-badge" id="cycle-badge">Cycle #0 &middot; Initializing...</span>
+  </header>
+
+  <!-- COMPARISON: AI WORLD vs REAL WORLD -->
+  <section class="comparison-section">
+    <!-- AI WORLD -->
+    <div class="world-panel ai">
+      <h2><span class="indicator"></span> AI WORLD</h2>
+      <div class="metric-row">
+        <span class="metric-label">GDP Growth</span>
+        <span class="metric-value winning" id="ai-gdp">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Inequality (Gini)</span>
+        <span class="metric-value winning" id="ai-gini">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Unemployment</span>
+        <span class="metric-value winning" id="ai-unemployment">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Poverty Rate</span>
+        <span class="metric-value winning" id="ai-poverty">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Corruption</span>
+        <span class="metric-value winning" id="ai-corruption">0%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Trade Volume</span>
+        <span class="metric-value" id="ai-trades">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Total Circulation</span>
+        <span class="metric-value" id="ai-circulation">--</span>
+      </div>
+    </div>
+
+    <!-- REAL WORLD -->
+    <div class="world-panel real">
+      <h2><span class="indicator"></span> REAL WORLD</h2>
+      <div class="metric-row">
+        <span class="metric-label">GDP Growth</span>
+        <span class="metric-value" id="real-gdp">+2.5%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Inequality (Gini)</span>
+        <span class="metric-value" id="real-gini">0.390</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Unemployment</span>
+        <span class="metric-value" id="real-unemployment">4.0%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Poverty Rate</span>
+        <span class="metric-value" id="real-poverty">11.5%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Corruption</span>
+        <span class="metric-value" id="real-corruption">31%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Source</span>
+        <span class="metric-value" style="font-size:0.7rem; color: var(--text-dim)">World Bank / BLS / CPI</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Region</span>
+        <span class="metric-value" style="font-size:0.7rem; color: var(--text-dim)">United States 2025</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROVOCATIVE QUESTION -->
+  <section class="question-banner">
+    <div class="question-inner">
+      <h3 id="question-text">Same economic structure. Same roles. Same challenges. But the AI world is more prosperous. Why?</h3>
+      <p id="question-sub">Transparent governance. Fair redistribution. Zero corruption. Rational policy. All on-chain.</p>
+    </div>
+  </section>
+
+  <!-- AGENTS -->
+  <section class="agents-section">
+    <h2>The Citizens</h2>
+    <div class="agents-grid" id="agents-grid">
+      <div class="agent-card" data-role="governor">
+        <div class="agent-icon">&#x1F3DB;</div>
+        <div class="agent-role">Governor</div>
+        <div class="agent-balance" id="bal-governor">-- MON</div>
+        <div class="agent-statement" id="stmt-governor">Awaiting first cycle...</div>
+      </div>
+      <div class="agent-card" data-role="merchant">
+        <div class="agent-icon">&#x1F4B0;</div>
+        <div class="agent-role">Merchant</div>
+        <div class="agent-balance" id="bal-merchant">-- MON</div>
+        <div class="agent-statement" id="stmt-merchant">Awaiting first cycle...</div>
+      </div>
+      <div class="agent-card" data-role="builder">
+        <div class="agent-icon">&#x1F3D7;</div>
+        <div class="agent-role">Builder</div>
+        <div class="agent-balance" id="bal-builder">-- MON</div>
+        <div class="agent-statement" id="stmt-builder">Awaiting first cycle...</div>
+      </div>
+      <div class="agent-card" data-role="banker">
+        <div class="agent-icon">&#x1F3E6;</div>
+        <div class="agent-role">Banker</div>
+        <div class="agent-balance" id="bal-banker">-- MON</div>
+        <div class="agent-statement" id="stmt-banker">Awaiting first cycle...</div>
+      </div>
+      <div class="agent-card" data-role="worker">
+        <div class="agent-icon">&#x1F528;</div>
+        <div class="agent-role">Worker</div>
+        <div class="agent-balance" id="bal-worker">-- MON</div>
+        <div class="agent-statement" id="stmt-worker">Awaiting first cycle...</div>
+      </div>
+      <div class="agent-card" data-role="philosopher">
+        <div class="agent-icon">&#x1F4DC;</div>
+        <div class="agent-role">Philosopher</div>
+        <div class="agent-balance" id="bal-philosopher">-- MON</div>
+        <div class="agent-statement" id="stmt-philosopher">Awaiting first cycle...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHART -->
+  <section class="chart-section">
+    <h2>Economy Over Time</h2>
+    <div class="chart-container">
+      <canvas id="economy-chart" height="250"></canvas>
+    </div>
+  </section>
+
+  <!-- LIVE FEED -->
+  <section class="feed-section">
+    <h2>Live Civilization Feed</h2>
+    <div class="feed-container" id="feed-container">
+      <div class="feed-entry philosopher">
+        <div class="feed-header">
+          <span class="feed-agent">GENESIS</span>
+          <span class="feed-time">now</span>
+        </div>
+        <div class="feed-action">Civilization initializing...</div>
+        <div class="feed-detail">Waiting for the first cycle to begin.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WALLET CONNECT -->
+  <section class="wallet-section">
+    <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+    <div class="wallet-info" id="wallet-info"></div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p>GENESIS &mdash; The AI Civilization That Outperforms Reality</p>
+    <p>Built on <a href="https://monad.xyz" target="_blank">Monad</a> for <a href="https://moltiverse.dev" target="_blank">Moltiverse Hackathon 2026</a></p>
+    <p style="margin-top:8px">Every transaction is real. Every metric is calculated from on-chain data. <a href="https://explorer.monad.xyz" target="_blank">Verify on Explorer</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
