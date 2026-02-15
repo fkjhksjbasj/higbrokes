@@ -223,7 +223,7 @@
           const timeStr = t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
           const actionClass = (e.type || e.action || '').toLowerCase();
           const actionLabel = e.action || e.type || '?';
-          const hashHtml = e.hash ? `<span class="f-hash"><a href="https://explorer.monad.xyz/tx/${e.hash}" target="_blank">${e.hash.slice(0,8)}...${e.hash.slice(-4)}</a></span>` : '';
+          const hashHtml = e.hash ? `<span class="f-hash"><a href="https://monadscan.com/tx/${e.hash}" target="_blank">${e.hash.slice(0,8)}...${e.hash.slice(-4)}</a></span>` : '';
           const detailHtml = e.detail ? `<span class="f-detail">${e.detail}</span>` : '';
           const partHtml = e.participants ? `<span class="f-detail">${e.participants} agents</span>` : '';
 

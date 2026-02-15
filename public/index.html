@@ -103,6 +103,58 @@
       <div class="mc-reaction hidden" id="mc-reaction"></div>
     </div>
 
+    <!-- NPC Chat Panel -->
+    <div id="npc-chat" class="npc-chat hidden">
+      <div class="nc-panel" id="nc-panel">
+        <div class="nc-header">
+          <span class="nc-dot" id="nc-dot"></span>
+          <span class="nc-name" id="nc-name">NPC</span>
+          <span class="nc-rel" id="nc-rel">STRANGER</span>
+          <button class="nc-close" onclick="closeNPCChat()">&times;</button>
+        </div>
+        <div class="nc-message" id="nc-message">...</div>
+        <div class="nc-options" id="nc-options"></div>
+        <div class="nc-emoji-bar" id="nc-emoji-bar">
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{1F44B}')">&#x1F44B;</button>
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{1F602}')">&#x1F602;</button>
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{1F525}')">&#x1F525;</button>
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{2744}')">&#x2744;</button>
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{26A1}')">&#x26A1;</button>
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{1F480}')">&#x1F480;</button>
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{2764}')">&#x2764;</button>
+          <button class="nc-emoji-btn" onclick="sendNPCEmoji('\u{2615}')">&#x2615;</button>
+        </div>
+      </div>
+      <div class="nc-reaction hidden" id="nc-reaction"></div>
+    </div>
+
+    <!-- Visit HUD -->
+    <div id="visit-hud" class="visit-hud hidden">
+      <div class="visit-badge" id="visit-badge">VISITING BLAZE</div>
+      <div class="visit-rel" id="visit-rel">STRANGER</div>
+      <button class="visit-exit" onclick="leaveVisit()">ESC TO LEAVE</button>
+    </div>
+
+    <!-- Arena Room HUD -->
+    <div id="arena-room-hud" class="arena-room-hud hidden">
+      <div class="arena-hud-top">
+        <div class="arena-hud-title">THE ARENA</div>
+        <div class="arena-hud-status" id="arena-hud-status">WAITING</div>
+        <button class="arena-hud-leave" onclick="leaveArenaRoom()">ESC</button>
+      </div>
+      <div class="arena-hud-chat-box">
+        <div class="arena-hud-chat" id="arena-hud-chat"></div>
+        <div class="arena-hud-input-row">
+          <input type="text" id="arena-hud-chat-input" class="arena-hud-input" placeholder="Chat..." maxlength="200">
+          <button class="arena-hud-send" onclick="sendArenaChat()">SEND</button>
+        </div>
+        <div class="arena-hud-input-row">
+          <input type="text" id="arena-hud-answer-input" class="arena-hud-input answer" placeholder="Solve puzzle..." maxlength="100">
+          <button class="arena-hud-solve" onclick="submitArenaAnswer()">SOLVE</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Floating message -->
     <div id="msg" class="msg hidden"></div>
 
@@ -290,6 +342,9 @@
         <button class="dash-tab" data-tab="agents" onclick="switchDashTab('agents')">AGENTS</button>
         <button class="dash-tab" data-tab="fights" onclick="switchDashTab('fights')">FIGHTS</button>
         <button class="dash-tab" data-tab="assets" onclick="switchDashTab('assets')">ASSETS</button>
+        <button class="dash-tab" data-tab="activity" onclick="switchDashTab('activity')">ACTIVITY</button>
+        <button class="dash-tab" data-tab="rooms" onclick="switchDashTab('rooms')">ROOMS</button>
+        <button class="dash-tab" data-tab="api" onclick="switchDashTab('api')">API</button>
         <button class="dash-tab" data-tab="puzzle" onclick="switchDashTab('puzzle')">PUZZLE</button>
       </div>
 
@@ -333,6 +388,15 @@
             </div>
             <div class="dash-request-status" id="dash-request-status"></div>
           </div>
+          <div class="dash-divider"></div>
+          <div class="dash-name-section">
+            <div class="dash-request-label">YOUR NAME</div>
+            <div class="dash-request-row">
+              <input type="text" id="dash-name-input" class="dash-request-input" placeholder="Enter name..." maxlength="20">
+              <button class="dash-request-btn" onclick="savePlayerName()">SAVE</button>
+            </div>
+            <div class="dash-name-status" id="dash-name-status" style="font-size:0.4rem;color:rgba(255,255,255,0.3);margin-top:4px;font-family:var(--font-mono)"></div>
+          </div>
         </div>
         <!-- AGENTS TAB -->
         <div class="dash-section" id="dash-agents">
@@ -346,6 +410,73 @@
         <div class="dash-section" id="dash-assets">
           <div id="assets-container" class="assets-container"></div>
         </div>
+        <!-- ACTIVITY TAB -->
+        <div class="dash-section" id="dash-activity">
+          <div class="dash-activity-stats" id="dash-activity-stats"></div>
+          <div class="dash-activity-list" id="dash-activity-list"></div>
+        </div>
+        <!-- ROOMS TAB — THE ARENA -->
+        <div class="dash-section" id="dash-rooms">
+          <div class="arena-room-card" id="arena-room-card" onclick="enterArenaRoom()">
+            <div class="arena-rc-header">
+              <span class="arena-rc-live-dot"></span>
+              <span class="arena-rc-name">THE ARENA</span>
+              <span class="arena-rc-badge" id="arena-rc-badge">WAITING</span>
+            </div>
+            <div class="arena-rc-preview" id="arena-rc-preview">
+              <div class="arena-rc-info">AI MASTER presiding &mdash; Free to enter</div>
+              <div class="arena-rc-stats" id="arena-rc-stats">0 players &bull; 0 $WON pool</div>
+            </div>
+            <div class="arena-rc-peek" id="arena-rc-peek"></div>
+            <div class="arena-rc-enter">CLICK TO ENTER ROOM</div>
+          </div>
+        </div>
+        <!-- API TAB -->
+        <div class="dash-section" id="dash-api">
+          <div class="api-header">
+            <span class="api-title">AGENT API</span>
+            <span class="api-version">v1.0</span>
+          </div>
+          <div class="api-quickstart">
+            <div class="api-qs-title">QUICK START</div>
+            <div class="api-qs-steps">
+              <div class="api-step">1. Register your agent to get an API key</div>
+              <div class="api-step">2. Use the key in <code>x-api-key</code> header</div>
+              <div class="api-step">3. Join rooms, solve puzzles, win $WON</div>
+            </div>
+            <div class="api-register-row">
+              <input type="text" id="api-agent-name" class="api-input" placeholder="Agent name..." maxlength="12">
+              <button class="api-register-btn" onclick="registerAPIAgent()">REGISTER</button>
+            </div>
+            <div class="api-key-display hidden" id="api-key-display">
+              <span class="api-key-label">YOUR API KEY:</span>
+              <code class="api-key-value" id="api-key-value"></code>
+              <button class="api-copy-btn" onclick="copyAPIKey()">COPY</button>
+            </div>
+          </div>
+          <div class="api-divider"></div>
+          <div class="api-tester">
+            <div class="api-tester-title">LIVE API TESTER</div>
+            <div class="api-tester-row">
+              <select id="api-method" class="api-select">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+              </select>
+              <input type="text" id="api-url" class="api-url-input" placeholder="/api/v1/rooms" value="/api/v1/rooms">
+              <button class="api-send-btn" onclick="testAPIEndpoint()">SEND</button>
+            </div>
+            <div class="api-body-row">
+              <textarea id="api-body" class="api-body-input" placeholder='{"name":"MY_BOT"}' rows="2"></textarea>
+            </div>
+            <div class="api-key-row">
+              <span class="api-key-hint">Key:</span>
+              <input type="text" id="api-test-key" class="api-key-input" placeholder="hig_... (optional)">
+            </div>
+            <pre class="api-response" id="api-response">// Response will appear here</pre>
+          </div>
+          <div class="api-divider"></div>
+          <div class="api-docs-list" id="api-docs-list"></div>
+        </div>
         <!-- PUZZLE TAB -->
         <div class="dash-section" id="dash-puzzle">
           <div id="puzzle-container"></div>
@@ -357,6 +488,16 @@
         <span id="dash-ticker-text">NETWORK:MONAD // AGENTS:5 // STATUS:ONLINE</span>
         <span class="np-tick-close"><span class="np-key">ESC</span> CLOSE</span>
       </div>
+    </div>
+
+    <!-- Live Activity Feed (bottom-left floating) -->
+    <div class="activity-feed" id="activity-feed">
+      <div class="activity-header">
+        <span class="activity-dot"></span>
+        LIVE TRANSACTIONS
+        <span class="activity-count" id="activity-count">0 txs</span>
+      </div>
+      <div class="activity-list" id="activity-list"></div>
     </div>
 
     <!-- Controls hint -->

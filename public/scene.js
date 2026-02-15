@@ -201,6 +201,87 @@ function makeTree(x, z, sc) {
 [[-15,-8],[-18,0],[-15,8],[15,-8],[18,0],[15,8],[-10,-15],[0,-18],[10,-15],[-10,15],[0,18],[10,15]]
   .forEach(([x,z]) => makeTree(x, z, 0.7 + Math.random() * 0.8));
 
+// ====== THE COURTROOM — Judge's Arena at (60, 0, 60) ======
+{
+  const cx = 60, cz = 60;
+  const courtMat = new THREE.MeshStandardMaterial({ color: 0x0a0a14, roughness: 0.8, metalness: 0.3 });
+  const judgeMat = new THREE.MeshStandardMaterial({ color: 0x1a0a00, roughness: 0.5, metalness: 0.6 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: 0xccaa00, emissive: 0xccaa00, emissiveIntensity: 0.15, roughness: 0.3, metalness: 0.8 });
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.6, metalness: 0.5 });
+
+  // Floor — dark stone platform
+  const courtFloor = new THREE.Mesh(new THREE.BoxGeometry(24, 0.3, 24), courtMat);
+  courtFloor.position.set(cx, -0.05, cz); courtFloor.receiveShadow = true; scene.add(courtFloor);
+
+  // Gold edge trim on floor
+  const floorTrim = new THREE.Mesh(new THREE.BoxGeometry(24.2, 0.05, 24.2), goldMat);
+  floorTrim.position.set(cx, 0.11, cz); scene.add(floorTrim);
+
+  // Judge's bench — elevated platform at the back
+  const judgeBench = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 3), judgeMat);
+  judgeBench.position.set(cx, 1, cz - 9); judgeBench.castShadow = true; scene.add(judgeBench);
+
+  // Gold strip on judge bench
+  const judgeStrip = new THREE.Mesh(new THREE.BoxGeometry(8.1, 0.08, 0.08), goldMat);
+  judgeStrip.position.set(cx, 1.95, cz - 7.55); scene.add(judgeStrip);
+
+  // Judge nameplate
+  const namePlate = new THREE.Mesh(new THREE.BoxGeometry(3, 0.6, 0.1), goldMat);
+  namePlate.position.set(cx, 1.6, cz - 7.52); scene.add(namePlate);
+
+  // Gavel on judge bench
+  const gavelHead = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0x4a2800, roughness: 0.4 }));
+  gavelHead.position.set(cx + 2.5, 2.1, cz - 8.5); scene.add(gavelHead);
+  const gavelHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.7, 6), new THREE.MeshStandardMaterial({ color: 0x3a1800 }));
+  gavelHandle.position.set(cx + 2.5, 2.1, cz - 8.5); gavelHandle.rotation.z = Math.PI / 2; scene.add(gavelHandle);
+
+  // Spectator benches — rows of seats
+  for (let row = 0; row < 3; row++) {
+    const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 1.2), railMat);
+    benchSeat.position.set(cx, 0.4 + row * 0.3, cz + 4 + row * 2.5);
+    benchSeat.castShadow = true; scene.add(benchSeat);
+    // Bench back
+    const benchBack = new THREE.Mesh(new THREE.BoxGeometry(10, 0.8, 0.15), railMat);
+    benchBack.position.set(cx, 0.9 + row * 0.3, cz + 4.55 + row * 2.5);
+    scene.add(benchBack);
+  }
+
+  // Side railings
+  for (const side of [-1, 1]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1, 18), railMat);
+    rail.position.set(cx + side * 11, 0.5, cz - 1); scene.add(rail);
+    // Gold cap
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 18.2), goldMat);
+    cap.position.set(cx + side * 11, 1.02, cz - 1); scene.add(cap);
+  }
+
+  // Pillars at corners
+  for (const px of [-1, 1]) {
+    for (const pz of [-1, 1]) {
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 5, 8), railMat);
+      pillar.position.set(cx + px * 11.5, 2.5, cz + pz * 11.5);
+      pillar.castShadow = true; scene.add(pillar);
+      // Gold ring on pillar
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 8, 16), goldMat);
+      ring.position.set(cx + px * 11.5, 4.8, cz + pz * 11.5);
+      ring.rotation.x = Math.PI / 2; scene.add(ring);
+    }
+  }
+
+  // Central arena floor marking — glowing ring
+  const ringGeo = new THREE.TorusGeometry(5, 0.08, 8, 48);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.4 });
+  const arenaRing = new THREE.Mesh(ringGeo, ringMat);
+  arenaRing.position.set(cx, 0.12, cz); arenaRing.rotation.x = -Math.PI / 2; scene.add(arenaRing);
+
+  // Courtroom lighting
+  const courtLight = new THREE.PointLight(0xffcc88, 1.5, 30);
+  courtLight.position.set(cx, 6, cz); scene.add(courtLight);
+  const judgeSpot = new THREE.SpotLight(0xffcc00, 2, 15, Math.PI / 6, 0.5);
+  judgeSpot.position.set(cx, 7, cz - 8); judgeSpot.target.position.set(cx, 0, cz - 9);
+  scene.add(judgeSpot); scene.add(judgeSpot.target);
+}
+
 // Crystals
 const crystalMeshes = [];
 function makeCrystal(x, z, h) {
@@ -326,9 +407,31 @@ function buildHome(name, pos) {
       group.add(boulder);
     }
     // Main light
-    const homeLight = new THREE.PointLight(0xff4400, 4, 25);
+    const homeLight = new THREE.PointLight(0xff4400, 6, 40);
     homeLight.position.y = 6; group.add(homeLight);
-    homeGroups[name] = { group, light: homeLight, pos };
+    // ── EXPANSION: outer floor + walls + tea area ──
+    const outerFloor = new THREE.Mesh(
+      new THREE.BoxGeometry(28, 0.3, 28),
+      new THREE.MeshStandardMaterial({ color: 0x1a0505, roughness: 0.8, metalness: 0.4 })
+    );
+    outerFloor.position.y = 0.05; outerFloor.receiveShadow = true; group.add(outerFloor);
+    // Walls (3 sides, gap on +z for doorway)
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a0a0a, emissive: 0xff2200, emissiveIntensity: 0.15, roughness: 0.7 });
+    const wallDefs = [[-14,0,0,0.4,3,28],[14,0,0,0.4,3,28],[0,0,-14,28,3,0.4]];
+    for (const [wx,wy,wz,sx,sy,sz] of wallDefs) {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), wallMat);
+      w.position.set(wx, 1.8 + wy, wz); w.castShadow = true; group.add(w);
+    }
+    // Tea area: two low seats in corner
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x3a1a0a, roughness: 0.6 });
+    const seatA = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 1), seatMat);
+    seatA.position.set(-10, 0.85, -10); group.add(seatA);
+    const seatB = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 1), seatMat);
+    seatB.position.set(-8, 0.85, -10); group.add(seatB);
+    // Tea table
+    const table = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.6, 8), new THREE.MeshStandardMaterial({ color: 0x4a2a0a }));
+    table.position.set(-9, 0.9, -10); group.add(table);
+    homeGroups[name] = { group, light: homeLight, pos, _teaSeatA: {x:-10,z:-10}, _teaSeatB: {x:-8,z:-10} };
 
   } else if (name === 'FROST') {
     // ── FLOATING ICE CITADEL — 14×14, crystal spires, frozen floor, hanging icicles ──
@@ -397,12 +500,31 @@ function buildHome(name, pos) {
       group.add(wall);
     }
     // Frost light
-    const homeLight = new THREE.PointLight(0x4488ff, 4, 25);
+    const homeLight = new THREE.PointLight(0x4488ff, 6, 40);
     homeLight.position.y = 6; group.add(homeLight);
-    // Second ambient light below for under-glow
     const underLight = new THREE.PointLight(0x2244aa, 2, 15);
     underLight.position.y = -2; group.add(underLight);
-    homeGroups[name] = { group, light: homeLight, pos };
+    // ── EXPANSION: outer floor + ice walls + tea area ──
+    const outerFloor = new THREE.Mesh(
+      new THREE.BoxGeometry(28, 0.6, 28),
+      new THREE.MeshStandardMaterial({ color: 0x0a1a3a, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.7 })
+    );
+    outerFloor.position.y = 0.2; outerFloor.receiveShadow = true; group.add(outerFloor);
+    const wallMat2 = new THREE.MeshStandardMaterial({ color: 0x1a2a6a, emissive: 0x4488ff, emissiveIntensity: 0.2, transparent: true, opacity: 0.6 });
+    const wallDefs2 = [[-14,0,0,0.4,3.5,28],[14,0,0,0.4,3.5,28],[0,0,-14,28,3.5,0.4]];
+    for (const [wx,wy,wz,sx,sy,sz] of wallDefs2) {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), wallMat2);
+      w.position.set(wx, 2.35 + wy, wz); group.add(w);
+    }
+    // Ice tea table + seats
+    const iceSeatMat = new THREE.MeshStandardMaterial({ color: 0x2244aa, transparent: true, opacity: 0.7, roughness: 0.05, metalness: 0.9 });
+    const seatA = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.8), iceSeatMat);
+    seatA.position.set(10, 1.55, -10); group.add(seatA);
+    const seatB = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.8), iceSeatMat);
+    seatB.position.set(12, 1.55, -10); group.add(seatB);
+    const iceTable = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.8), iceSeatMat);
+    iceTable.position.set(11, 1.65, -10); group.add(iceTable);
+    homeGroups[name] = { group, light: homeLight, pos, _teaSeatA: {x:10,z:-10}, _teaSeatB: {x:12,z:-10} };
 
   } else if (name === 'VOLT') {
     // ── ELECTRIC FACTORY — 14×14, metal floor, tesla towers, spark arcs, wire grid ──
@@ -476,9 +598,29 @@ function buildHome(name, pos) {
       group.add(spark);
     }
     // Electric light
-    const homeLight = new THREE.PointLight(0xffdd44, 4, 25);
+    const homeLight = new THREE.PointLight(0xffdd44, 6, 40);
     homeLight.position.y = 5; group.add(homeLight);
-    homeGroups[name] = { group, light: homeLight, pos };
+    // ── EXPANSION: metal floor + chain-link walls + tea area ──
+    const outerFloor = new THREE.Mesh(
+      new THREE.BoxGeometry(28, 0.2, 28),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a0a, roughness: 0.4, metalness: 0.9 })
+    );
+    outerFloor.position.y = 0.05; outerFloor.receiveShadow = true; group.add(outerFloor);
+    const wallMat3 = new THREE.MeshStandardMaterial({ color: 0x3a3a1a, emissive: 0xffdd00, emissiveIntensity: 0.1, roughness: 0.5, metalness: 0.8 });
+    const wallDefs3 = [[-14,0,0,0.3,3,28],[14,0,0,0.3,3,28],[0,0,-14,28,3,0.3]];
+    for (const [wx,wy,wz,sx,sy,sz] of wallDefs3) {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), wallMat3);
+      w.position.set(wx, 1.7 + wy, wz); w.castShadow = true; group.add(w);
+    }
+    // Workbench + stools for tea
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x4a4a1a, roughness: 0.6, metalness: 0.7 });
+    const seatA = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.6, 8), benchMat);
+    seatA.position.set(-10, 0.5, 10); group.add(seatA);
+    const seatB = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.6, 8), benchMat);
+    seatB.position.set(-8, 0.5, 10); group.add(seatB);
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 1), benchMat);
+    bench.position.set(-9, 0.5, 10); group.add(bench);
+    homeGroups[name] = { group, light: homeLight, pos, _teaSeatA: {x:-10,z:10}, _teaSeatB: {x:-8,z:10} };
 
   } else if (name === 'SHADE') {
     // ── DARK FLOATING TEMPLE — 14×14, obsidian obelisks, void portal, rune circles ──
@@ -551,9 +693,32 @@ function buildHome(name, pos) {
       group.add(rune);
     }
     // Dark mist light
-    const homeLight = new THREE.PointLight(0x8833cc, 4, 25);
+    const homeLight = new THREE.PointLight(0x8833cc, 6, 40);
     homeLight.position.y = 6; group.add(homeLight);
-    homeGroups[name] = { group, light: homeLight, pos };
+    // ── EXPANSION: obsidian floor + dark walls + tea altar ──
+    const outerFloor = new THREE.Mesh(
+      new THREE.BoxGeometry(28, 0.4, 28),
+      new THREE.MeshStandardMaterial({ color: 0x050210, roughness: 0.95, metalness: 0.5 })
+    );
+    outerFloor.position.y = 0.05; outerFloor.receiveShadow = true; group.add(outerFloor);
+    const wallMat4 = new THREE.MeshStandardMaterial({ color: 0x0a0318, emissive: 0xcc44ff, emissiveIntensity: 0.1, roughness: 0.9 });
+    const wallDefs4 = [[-14,0,0,0.4,4,28],[14,0,0,0.4,4,28],[0,0,-14,28,4,0.4]];
+    for (const [wx,wy,wz,sx,sy,sz] of wallDefs4) {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), wallMat4);
+      w.position.set(wx, 2.4 + wy, wz); group.add(w);
+    }
+    // Dark altar table + cushions for tea
+    const altarMat = new THREE.MeshStandardMaterial({ color: 0x1a003a, emissive: 0x6600cc, emissiveIntensity: 0.3 });
+    const seatA = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.8), altarMat);
+    seatA.position.set(10, 0.65, 10); group.add(seatA);
+    const seatB = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.8), altarMat);
+    seatB.position.set(12, 0.65, 10); group.add(seatB);
+    const altar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.6), altarMat);
+    altar.position.set(11, 0.8, 10); group.add(altar);
+    // Altar glow
+    const altarGlow = new THREE.PointLight(0x6600cc, 2, 5);
+    altarGlow.position.set(11, 1.5, 10); group.add(altarGlow);
+    homeGroups[name] = { group, light: homeLight, pos, _teaSeatA: {x:10,z:10}, _teaSeatB: {x:12,z:10} };
 
   } else if (name === 'YOU') {
     // ── CYAN COMMAND CENTER — 12×12, data pillars, holo beacon, scanner ring ──
@@ -621,8 +786,14 @@ function buildHome(name, pos) {
       group.add(dLight);
     }
     // Holo light
-    const homeLight = new THREE.PointLight(0x00ffcc, 4, 25);
+    const homeLight = new THREE.PointLight(0x00ffcc, 6, 35);
     homeLight.position.y = 6; group.add(homeLight);
+    // ── EXPANSION: larger floor ──
+    const outerFloor = new THREE.Mesh(
+      new THREE.BoxGeometry(20, 0.2, 20),
+      new THREE.MeshStandardMaterial({ color: 0x060e1a, roughness: 0.3, metalness: 0.7 })
+    );
+    outerFloor.position.y = 0.05; outerFloor.receiveShadow = true; group.add(outerFloor);
     homeGroups[name] = { group, light: homeLight, pos };
   }
 
@@ -650,6 +821,22 @@ for (const [name, pos] of Object.entries(HOME_POSITIONS)) {
   buildHome(name, pos);
 }
 
+// Register home floors as walkable platforms so getGroundY works there
+const HOME_FLOOR_DATA = {
+  BLAZE: { size: 16, baseH: 0.6, localY: 0.3 },
+  FROST: { size: 14, baseH: 1.2, localY: 0.6 },
+  VOLT:  { size: 14, baseH: 0.4, localY: 0.2 },
+  SHADE: { size: 14, baseH: 0.8, localY: 0.4 },
+  YOU:   { size: 12, baseH: 0.4, localY: 0.2 },
+};
+for (const [name, pos] of Object.entries(HOME_POSITIONS)) {
+  const fd = HOME_FLOOR_DATA[name];
+  if (fd) {
+    const top = (pos.y || 0) + fd.localY + fd.baseH / 2;
+    platforms.push({ x: pos.x, y: top - 0.15, z: pos.z, w: fd.size, h: 0.3, d: fd.size });
+  }
+}
+
 // ── Persistent NPC characters at their homes ──
 const homeNPCs = {};
 for (const name of ['BLAZE', 'FROST', 'VOLT', 'SHADE']) {
@@ -661,6 +848,89 @@ for (const name of ['BLAZE', 'FROST', 'VOLT', 'SHADE']) {
   npc.group.position.set(npc.x, npc.y, npc.z);
   npc._homeX = pos.x; npc._homeZ = pos.z; npc._homeY = baseY;
   npc._idlePhase = Math.random() * Math.PI * 2;
+  homeNPCs[name] = npc;
+}
+
+// ── Dynamic API agent home spawning ──
+const spawnedAPIAgents = new Set(); // Track which API agents we've already built
+
+function spawnAPIAgentHome(name, agentData) {
+  if (spawnedAPIAgents.has(name)) return;
+  if (!agentData.homePosition) return;
+  spawnedAPIAgents.add(name);
+
+  const pos = agentData.homePosition;
+  const colorHex = agentData.color || 0x00ffcc;
+  const colorStr = '#' + colorHex.toString(16).padStart(6, '0');
+
+  // Register in HOME_POSITIONS and HOME_LOOK
+  HOME_POSITIONS[name] = { x: pos.x, y: pos.y || 0, z: pos.z };
+  HOME_LOOK[name] = { bodyColor: colorHex, glowColor: colorHex };
+  HOME_FLOOR_DATA[name] = { size: 14, baseH: 0.4, localY: 0.2 };
+  NPC_ACCENT_COLORS[name] = colorStr;
+  AGENT_COLORS[name] = colorStr;
+
+  // Build a simple platform home
+  const group = new THREE.Group();
+  group.position.set(pos.x, pos.y || 0, pos.z);
+
+  // Platform
+  const platGeo = new THREE.BoxGeometry(14, 0.4, 14);
+  const platMat = new THREE.MeshStandardMaterial({
+    color: colorHex, metalness: 0.6, roughness: 0.3, emissive: colorHex, emissiveIntensity: 0.15,
+  });
+  const plat = new THREE.Mesh(platGeo, platMat);
+  plat.position.set(0, 0.2, 0);
+  group.add(plat);
+
+  // Corner pillars (4)
+  const pillarGeo = new THREE.BoxGeometry(0.5, 3, 0.5);
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a28, emissive: colorHex, emissiveIntensity: 0.3 });
+  for (const cx of [-6, 6]) {
+    for (const cz of [-6, 6]) {
+      const pil = new THREE.Mesh(pillarGeo, pillarMat);
+      pil.position.set(cx, 1.9, cz);
+      group.add(pil);
+    }
+  }
+
+  // Name sign (floating text sprite)
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, 256, 64);
+  ctx.fillStyle = colorStr;
+  ctx.font = 'bold 28px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(name, 128, 42);
+  const tex = new THREE.CanvasTexture(canvas);
+  const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(5, 1.25, 1);
+  sprite.position.set(0, 5, 0);
+  group.add(sprite);
+
+  // Light
+  const homeLight = new THREE.PointLight(colorHex, 1.5, 20);
+  homeLight.position.set(0, 4, 0);
+  group.add(homeLight);
+
+  scene.add(group);
+  homeGroups[name] = { group, light: homeLight, pos: HOME_POSITIONS[name] };
+
+  // Register walkable platform
+  const top = (pos.y || 0) + 0.2 + 0.4 / 2;
+  platforms.push({ x: pos.x, y: top - 0.15, z: pos.z, w: 14, h: 0.3, d: 14 });
+
+  // Create NPC character
+  const npc = createCharacter({ bodyColor: colorHex, glowColor: colorHex, name });
+  const baseY = (pos.y || 0) + 1;
+  npc.x = pos.x; npc.z = pos.z; npc.y = baseY;
+  npc.group.position.set(npc.x, npc.y, npc.z);
+  npc._homeX = pos.x; npc._homeZ = pos.z; npc._homeY = baseY;
+  npc._idlePhase = Math.random() * Math.PI * 2;
+  npc._isAPIAgent = true;
   homeNPCs[name] = npc;
 }
 
@@ -708,6 +978,13 @@ function animateHomeNPCs(dt, t) {
       npc.z = npc._homeZ + Math.cos(t * 0.25 + ph) * 4;
       npc.y = npc._homeY;
       npc.group.rotation.y = Math.atan2(Math.cos(t * 0.25 + ph), -Math.sin(t * 0.25 + ph));
+    } else if (npc._isAPIAgent) {
+      // Generic idle: slow patrol in a circle
+      npc.speed = 0.8;
+      npc.x = npc._homeX + Math.sin(t * 0.4 + ph) * 3;
+      npc.z = npc._homeZ + Math.cos(t * 0.35 + ph) * 3;
+      npc.y = npc._homeY;
+      npc.group.rotation.y = Math.atan2(Math.cos(t * 0.4 + ph), -Math.sin(t * 0.4 + ph));
     }
 
     npc.group.position.set(npc.x, npc.y, npc.z);
@@ -2544,12 +2821,42 @@ let spectateReturnPos = null;
 let spectateReturnTarget = null;
 let spectatePlayerPos = null;
 
+// Visit state
+let visitingNPC = null;
+let visitReturnPos = null;
+let visitReturnTarget = null;
+let visitTeleporting = false;
+let visitTeleportStart = 0;
+let visitTeleportFrom = null;
+let visitTeleportTo = null;
+const VISIT_TELEPORT_DURATION = 1500;
+
+// NPC chat state
+let npcChatName = null;
+let npcChatTyping = null;
+
+// Emoji sprites
+const emojiSprites = [];
+const floatingChats = []; // chat messages floating above heads in 3D
+
+// Tea state
+let teaSession = null;
+const teaCups = [];
+
 
 // ============================================================
 // INPUT
 // ============================================================
 const keys = {};
 window.addEventListener('keydown', e => {
+  // Skip game hotkeys when typing in input/textarea
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+    // Only allow Escape to blur
+    if (e.code === 'Escape') document.activeElement.blur();
+    return;
+  }
+
   keys[e.code] = true;
 
   // Prevent browser scroll for game keys
@@ -2586,7 +2893,19 @@ window.addEventListener('keydown', e => {
     if (dashEl && !dashEl.classList.contains('hidden')) toggleDashboard();
   }
 
+  if (e.code === 'Escape' && inArenaRoom) {
+    leaveArenaRoom();
+    return;
+  }
+
+  if (e.code === 'Escape' && visitingNPC) {
+    leaveVisit();
+    return;
+  }
+
   if (e.code === 'Escape' && !spectatingChallenge) {
+    // Close NPC chat first
+    if (npcChatName) { closeNPCChat(); return; }
     // Close profile overlay first, then dashboard
     const profileEl = document.getElementById('agent-profile-overlay');
     if (profileEl && !profileEl.classList.contains('hidden')) { closeAgentProfile(); return; }
@@ -2716,6 +3035,23 @@ function togglePlayerFlight() {
 function updatePlayer(dt) {
   // Disable movement during spectate
   if (camMode === 'SPECTATE' || spectatingChallenge) return;
+
+  // ====== VISIT TELEPORT LERP ======
+  if (visitTeleporting && visitTeleportFrom && visitTeleportTo) {
+    const elapsed = performance.now() - visitTeleportStart;
+    const raw = Math.min(1, elapsed / VISIT_TELEPORT_DURATION);
+    // Ease in-out quad
+    const p = raw < 0.5 ? 2 * raw * raw : 1 - Math.pow(-2 * raw + 2, 2) / 2;
+    player.x = visitTeleportFrom.x + (visitTeleportTo.x - visitTeleportFrom.x) * p;
+    player.y = visitTeleportFrom.y + (visitTeleportTo.y - visitTeleportFrom.y) * p;
+    player.z = visitTeleportFrom.z + (visitTeleportTo.z - visitTeleportFrom.z) * p;
+    player.group.position.set(player.x, player.y, player.z);
+    if (raw >= 1) {
+      visitTeleporting = false;
+      if (visitingNPC) startNPCChat(visitingNPC);
+    }
+    return;
+  }
 
   // ====== FLIGHT PHYSICS ======
   if (playerFlying && !missionAIControl) {
@@ -2849,8 +3185,15 @@ function updatePlayer(dt) {
   if (player.y <= gy) { player.y = gy; player.vy = 0; player.grounded = true; }
   else if (player.y > gy + 0.05) player.grounded = false;
 
-  player.x = Math.max(-35, Math.min(35, player.x));
-  player.z = Math.max(-35, Math.min(35, player.z));
+  if (inArenaRoom) {
+    // In arena room: clamp around ARENA_ROOM_POS
+    player.x = Math.max(ARENA_ROOM_POS.x - 200, Math.min(ARENA_ROOM_POS.x + 200, player.x));
+    player.z = Math.max(ARENA_ROOM_POS.z - 200, Math.min(ARENA_ROOM_POS.z + 200, player.z));
+  } else {
+    const bound = visitingNPC ? 180 : 35;
+    player.x = Math.max(-bound, Math.min(bound, player.x));
+    player.z = Math.max(-bound, Math.min(bound, player.z));
+  }
   player.group.position.set(player.x, player.y, player.z);
   player.group.rotation.y = player.angle;
 }
@@ -3088,6 +3431,7 @@ function animate() {
   animateChar(player, dt, t);
   animateHomeNPCs(dt, t);
   animateHomes(t);
+  animateArenaRoom(t);
   checkAgentPlanes();
   animateHomePlanes(t);
   animatePlayerPlane(t);
@@ -3098,6 +3442,9 @@ function animate() {
   checkNewAttacks();
   checkMasterAppearance();
   animateMaster(t);
+  updateEmojiSprites(dt);
+  updateFloatingChats(dt);
+  updateTeaSession(dt, t);
   checkAttackMission();
   updateAttackMission(dt, t);
   updateNpcBetrayal(dt, t);
@@ -5214,7 +5561,7 @@ const MONAD_CHAIN = {
   chainName: 'Monad',
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
   rpcUrls: ['https://rpc.monad.xyz'],
-  blockExplorerUrls: ['https://explorer.monad.xyz']
+  blockExplorerUrls: ['https://monadscan.com']
 };
 const WON_TOKEN_ADDRESS = '0x9d36A73462962d767509FC170c287634A0907777';
 const ERC20_BALANCE_ABI = ['function balanceOf(address) view returns (uint256)'];
@@ -5265,6 +5612,7 @@ async function _finalizeWalletConnect(address, silent) {
 
   if (!silent) showMsg('Wallet connected to Monad!');
   await updateWalletBalance();
+  loadPlayerName();
 
   // Listen for account/chain changes (only once)
   if (!_walletListenersSet) {
@@ -5434,7 +5782,7 @@ document.getElementById('tx-confirm')?.addEventListener('click', async () => {
       const hashRow = document.getElementById('tx-hash-row');
       const hashLink = document.getElementById('tx-hash-link');
       if (hashRow && hashLink) {
-        hashLink.href = `https://explorer.monad.xyz/tx/${receipt.hash}`;
+        hashLink.href = `https://monadscan.com/tx/${receipt.hash}`;
         hashLink.textContent = receipt.hash.slice(0, 10) + '...' + receipt.hash.slice(-6);
         hashRow.classList.remove('hidden');
       }
@@ -5836,14 +6184,27 @@ async function fetchActivity() {
       const div = document.createElement('div');
       div.className = 'activity-item';
 
-      const actionClass = (e.action || '').toLowerCase();
-      const hashLink = e.hash ? `<a class="act-hash" href="https://explorer.monad.xyz/tx/${e.hash}" target="_blank">${e.hash.slice(0,6)}...</a>` : '';
+      const actionClass = (e.type || e.action || '').toLowerCase();
+      const hashLink = e.hash ? `<a class="act-hash" href="https://monadscan.com/tx/${e.hash}" target="_blank">${e.hash.slice(0,6)}...</a>` : '';
+      const label = e.type === 'NPC_SERVICE' ? e.action :
+                    e.type === 'TEA_SESSION' ? e.action :
+                    e.type === 'CHALLENGE_WIN' ? 'WIN' :
+                    e.type === 'CHALLENGE_CREATE' ? 'FIGHT' :
+                    e.type === 'CHALLENGE_ACCEPT' ? 'ACCEPT' :
+                    e.type === 'ROOM_CREATE' ? 'ROOM' :
+                    e.type === 'ROOM_JOIN' ? 'JOIN' :
+                    e.type === 'ROOM_WIN' ? 'WIN' :
+                    e.type === 'ROOM_BET' ? 'BET' :
+                    e.type === 'ROOM_POOL' ? 'POOL' :
+                    e.type === 'PUZZLE_SOLVE' ? 'SOLVE' :
+                    e.type === 'AGENT_REGISTER' ? 'AGENT' :
+                    (e.action || e.type);
 
       div.innerHTML = `
         <span class="act-agent">${e.agent || '?'}</span>
-        <span class="act-action ${actionClass}">${e.action || e.type}</span>
-        <span>${e.token || ''}</span>
-        <span class="act-amount">${e.amount} MON</span>
+        <span class="act-action ${actionClass}">${label}</span>
+        <span class="act-detail-mini">${e.detail || ''}</span>
+        <span class="act-amount">${e.amount} $WON</span>
         ${hashLink}
       `;
       list.appendChild(div);
@@ -5859,6 +6220,21 @@ async function fetchActivity() {
 
 fetchActivity();
 setInterval(fetchActivity, 4000);
+
+// Poll for new API agents periodically and spawn their 3D homes
+async function pollForAPIAgents() {
+  try {
+    const r = await fetch('/api/agents');
+    const agents = await r.json();
+    for (const [name, ag] of Object.entries(agents)) {
+      if (ag.isAPIAgent && ag.homePosition && !spawnedAPIAgents.has(name)) {
+        spawnAPIAgentHome(name, ag);
+      }
+    }
+  } catch (e) { /* silent */ }
+}
+setTimeout(pollForAPIAgents, 3000);
+setInterval(pollForAPIAgents, 10000);
 
 // ============================================================
 // DASHBOARD
@@ -5883,6 +6259,9 @@ function switchDashTab(tab) {
   document.querySelectorAll('.dash-section').forEach(s => s.classList.toggle('active', s.id === `dash-${tab}`));
   if (tab === 'puzzle') refreshPuzzleTab();
   else if (tab === 'assets') refreshAssetsTab();
+  else if (tab === 'activity') refreshActivityTab();
+  else if (tab === 'rooms') refreshRoomsTab();
+  else if (tab === 'api') refreshAPITab();
   else refreshDashboard();
 }
 window.switchDashTab = switchDashTab;
@@ -5914,10 +6293,18 @@ async function refreshDashboard() {
       if (earningsEl) earningsEl.textContent = (you.totalEarnings || 0).toFixed(4) + ' MON';
     }
 
+    // Spawn 3D homes for any new API agents
+    for (const [name, ag] of Object.entries(agents)) {
+      if (ag.isAPIAgent && ag.homePosition && !spawnedAPIAgents.has(name)) {
+        spawnAPIAgentHome(name, ag);
+      }
+    }
+
     // Master mood in WORLD tab
+    const agentCount = Object.keys(agents).length;
     const dashTickerEl = document.getElementById('dash-ticker-text');
     if (dashTickerEl && masterData) {
-      dashTickerEl.textContent = `MASTER:${masterData.mood} // REWARD:${masterData.rewardMultiplier}x // DIFF:${masterData.challengeModifier}x // AGENTS:5`;
+      dashTickerEl.textContent = `MASTER:${masterData.mood} // REWARD:${masterData.rewardMultiplier}x // DIFF:${masterData.challengeModifier}x // AGENTS:${agentCount}`;
     }
 
     // AGENTS tab
@@ -5932,19 +6319,30 @@ async function refreshDashboard() {
       agentList.innerHTML = Object.entries(agents)
         .sort((a, b) => (b[1].wins || 0) - (a[1].wins || 0))
         .map(([name, ag]) => {
-          const color = AGENT_COLORS[name] || '#888';
+          const color = AGENT_COLORS[name] || (ag.color ? '#' + ag.color.toString(16).padStart(6, '0') : '#888');
           const isFighting = fighting.has(name);
-          const statusCls = isFighting ? 'fighting' : 'idle';
-          const statusTxt = isFighting ? 'FIGHTING' : 'IDLE';
+          const statusCls = isFighting ? 'fighting' : ag.isAPIAgent ? 'api' : 'idle';
+          const statusTxt = isFighting ? 'FIGHTING' : ag.isAPIAgent ? 'API BOT' : 'IDLE';
           const moodColors = { DOMINANT:'#ff4444', CONFIDENT:'#55ff88', NEUTRAL:'#666', FRUSTRATED:'#ff8844', DESPERATE:'#ff2222' };
           const mood = ag.mood || 'NEUTRAL';
           const moodCol = moodColors[mood] || '#666';
           const streak = ag.streak || 0;
           const streakTxt = streak > 0 ? '+' + streak : streak < 0 ? String(streak) : '0';
+          // Service data — works for both built-in NPCs and API agents
+          const svc = (name !== 'YOU' && ag.service) ? {
+            name: ag.service, icon: ag.isAPIAgent ? '🤖' : { BLAZE: '🔥', FROST: '❄️', VOLT: '⚡', SHADE: '👻' }[name] || '☕',
+            cost: (ag.serviceCost || 1) + ' $WON', desc: ag.serviceDesc || 'Special brew',
+          } : null;
+          const visitSection = name !== 'YOU' ? `
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
+              <button class="dash-visit-btn" onclick="event.stopPropagation();visitNPC('${name}')" style="background:${color};color:#000;border:none;padding:8px 18px;border-radius:6px;font-size:0.34rem;font-weight:800;cursor:pointer;letter-spacing:1px;">VISIT</button>
+              ${svc ? `<button class="dash-visit-btn" onclick="event.stopPropagation();buyNPCService('${name}')" style="background:linear-gradient(135deg,#ffcc00,#ff8800);color:#000;border:none;padding:8px 14px;border-radius:6px;font-size:0.3rem;font-weight:800;cursor:pointer;">${svc.icon} BUY ${svc.name}</button>
+              <span style="font-size:0.24rem;color:rgba(255,255,255,0.4);line-height:1.2;">${svc.cost}<br>${svc.desc}</span>` : ''}
+            </div>` : '';
           return `<div class="dash-agent-card" onclick="openAgentProfile('${name}')" style="cursor:pointer">
             <div class="dash-agent-dot" style="background:${color};box-shadow:0 0 6px ${color}"></div>
             <div class="dash-agent-info">
-              <span class="dash-agent-name">${name}</span>
+              <span class="dash-agent-name">${name}${ag.isAPIAgent ? ' <span style="font-size:0.2rem;color:rgba(255,255,255,0.3)">[API]</span>' : ''}</span>
               <span class="dash-agent-archetype">${ag.archetype || ''}</span>
             </div>
             <div class="dash-agent-stats">
@@ -5954,6 +6352,7 @@ async function refreshDashboard() {
             </div>
             <span class="dash-agent-mood" style="color:${moodCol}">${mood}</span>
             <span class="dash-agent-status ${statusCls}">${statusTxt}</span>
+            ${visitSection}
           </div>`;
         }).join('');
     }
@@ -6085,6 +6484,82 @@ async function refreshAssetsTab() {
     `;
   } catch (e) {
     container.innerHTML = '<div style="color:rgba(255,255,255,0.3);text-align:center;padding:20px;">Loading assets...</div>';
+  }
+}
+
+// ====== ACTIVITY TAB ======
+async function refreshActivityTab() {
+  const statsEl = document.getElementById('dash-activity-stats');
+  const listEl = document.getElementById('dash-activity-list');
+  if (!statsEl || !listEl) return;
+
+  try {
+    const r = await fetch('/api/activity?limit=100');
+    const data = await r.json();
+    const entries = data.entries || [];
+    const stats = data.stats || {};
+
+    // Stats header
+    const agentNames = Object.keys(stats.agentActivity || {});
+    const topAgent = agentNames.sort((a, b) => (stats.agentActivity[b] || 0) - (stats.agentActivity[a] || 0))[0] || '--';
+    statsEl.innerHTML = `
+      <div class="dash-act-stat">
+        <span class="dash-act-stat-label">TOTAL TXS</span>
+        <span class="dash-act-stat-val">${stats.totalTransactions || 0}</span>
+      </div>
+      <div class="dash-act-stat">
+        <span class="dash-act-stat-label">VOLUME</span>
+        <span class="dash-act-stat-val gold">${stats.totalVolumeMON || '0.00'} $WON</span>
+      </div>
+      <div class="dash-act-stat">
+        <span class="dash-act-stat-label">ACTIVE AGENTS</span>
+        <span class="dash-act-stat-val green">${stats.activeAgents || 0}</span>
+      </div>
+      <div class="dash-act-stat">
+        <span class="dash-act-stat-label">MOST ACTIVE</span>
+        <span class="dash-act-stat-val">${topAgent}</span>
+      </div>
+    `;
+
+    // Transaction list (newest first)
+    const reversed = entries.slice().reverse();
+    if (reversed.length === 0) {
+      listEl.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:0.26rem;text-align:center;padding:20px;">No transactions yet</div>';
+      return;
+    }
+
+    listEl.innerHTML = reversed.map(e => {
+      const typeCls = (e.type || '').toLowerCase();
+      const label = e.type === 'NPC_SERVICE' ? e.action :
+                    e.type === 'TEA_SESSION' ? e.action :
+                    e.type === 'CHALLENGE_WIN' ? 'WIN' :
+                    e.type === 'CHALLENGE_CREATE' ? 'FIGHT' :
+                    e.type === 'CHALLENGE_ACCEPT' ? 'ACCEPT' :
+                    e.type === 'ROOM_CREATE' ? 'ROOM' :
+                    e.type === 'ROOM_JOIN' ? 'JOIN' :
+                    e.type === 'ROOM_WIN' ? 'WIN' :
+                    e.type === 'ROOM_BET' ? 'BET' :
+                    e.type === 'ROOM_POOL' ? 'POOL' :
+                    e.type === 'PUZZLE_SOLVE' ? 'SOLVE' :
+                    e.type === 'AGENT_REGISTER' ? 'AGENT' :
+                    (e.action || e.type || '?');
+      const hashLink = e.hash
+        ? `<a class="dash-act-hash" href="https://monadscan.com/tx/${e.hash}" target="_blank">${e.hash.slice(0,8)}...</a>`
+        : '';
+      const detail = e.detail || '';
+      const timeStr = e.time ? formatTimeAgo(e.time) : '';
+
+      return `<div class="dash-act-row">
+        <span class="dash-act-time">${timeStr}</span>
+        <span class="dash-act-agent">${e.agent || '?'}</span>
+        <span class="dash-act-type ${typeCls}">${label}</span>
+        <span class="dash-act-detail">${detail}</span>
+        <span class="dash-act-amount">${e.amount || '0'} $WON</span>
+        ${hashLink}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = '<div style="color:rgba(255,255,255,0.3);text-align:center;padding:20px;">Loading activity...</div>';
   }
 }
 
@@ -6781,6 +7256,7 @@ function triggerNormalTransform() {
 }
 
 function animateMaster(t) {
+  if (visitingNPC) return; // Suppress during NPC visits
   const active = getActiveMaster();
   if (!active || !masterVisible) return;
   const g = active.group;
@@ -7058,6 +7534,8 @@ let masterChatReactionTimeout = null;
 
 function checkMasterAppearance() {
   if (!masterData) return;
+  // Suppress master during NPC visits
+  if (visitingNPC) { if (masterVisible) { hideMaster(); closeMasterChat(); } return; }
 
   // Check for mode change (boss transformation)
   const serverMode = masterData.masterMode || 'normal';
@@ -7587,9 +8065,11 @@ window.submitPuzzle = submitPuzzle;
 setInterval(() => {
   if (dashboardOpen) {
     refreshDashboard();
-    // If puzzle tab is active, refresh it
+    // Refresh active special tabs
     const puzzleSection = document.getElementById('dash-puzzle');
     if (puzzleSection?.classList.contains('active')) refreshPuzzleTab();
+    const activitySection = document.getElementById('dash-activity');
+    if (activitySection?.classList.contains('active')) refreshActivityTab();
   }
 }, 3000);
 
@@ -7607,6 +8087,1228 @@ function updateTicker() {
 // Crosshair hidden in orbit (uses mouse + highlight box); shown in FP
 const crosshairEl = document.getElementById('crosshair');
 if (crosshairEl) crosshairEl.style.display = 'none';
+
+// ============================================================
+// PHASE 3: VISIT / TELEPORT SYSTEM
+// ============================================================
+const NPC_ACCENT_COLORS = { BLAZE: '#ff4444', FROST: '#4488ff', VOLT: '#ffdd44', SHADE: '#cc44ff' };
+
+function visitNPC(name) {
+  if (visitingNPC || spectatingChallenge) return;
+  const home = HOME_POSITIONS[name];
+  if (!home) return;
+
+  // Save return position
+  visitReturnPos = { x: player.x, y: player.y, z: player.z };
+  visitReturnTarget = controls.target.clone();
+
+  // Destination = NPC home offset slightly to stand near them
+  // Y must be on top of the platform floor, not at the group origin
+  const fd = HOME_FLOOR_DATA[name];
+  const floorY = fd ? (home.y || 0) + fd.localY + fd.baseH / 2 : (home.y || 0);
+  const dest = { x: home.x + 5, y: floorY, z: home.z + 5 };
+
+  // Start teleport
+  visitingNPC = name;
+  visitTeleporting = true;
+  visitTeleportStart = performance.now();
+  visitTeleportFrom = { x: player.x, y: player.y, z: player.z };
+  visitTeleportTo = dest;
+
+  // Close dashboard
+  const dashEl = document.getElementById('dashboard');
+  if (dashEl && !dashEl.classList.contains('hidden')) toggleDashboard();
+
+  // Show visit HUD
+  const hud = document.getElementById('visit-hud');
+  if (hud) {
+    hud.classList.remove('hidden');
+    const badge = document.getElementById('visit-badge');
+    const rel = document.getElementById('visit-rel');
+    if (badge) { badge.textContent = `VISITING ${name}`; badge.style.color = NPC_ACCENT_COLORS[name] || '#fff'; }
+    if (rel) rel.textContent = 'LOADING...';
+    // Fetch relationship
+    fetch(`/api/npc/${name}/social`).then(r => r.json()).then(d => {
+      if (rel) rel.textContent = (d.relationship || 'stranger').toUpperCase();
+    }).catch(() => {});
+  }
+}
+window.visitNPC = visitNPC;
+
+async function buyNPCService(name) {
+  // Buy tea/service directly from dashboard — visits + starts tea automatically
+  visitNPC(name);
+  // Wait for teleport to finish, then auto-start tea
+  setTimeout(() => {
+    startTeaSession(name);
+  }, VISIT_TELEPORT_DURATION + 500);
+}
+window.buyNPCService = buyNPCService;
+
+function leaveVisit() {
+  if (!visitingNPC) return;
+
+  // End tea if active
+  if (teaSession) endTeaSession();
+
+  // Close NPC chat
+  closeNPCChat();
+
+  // Teleport back
+  visitTeleporting = true;
+  visitTeleportStart = performance.now();
+  visitTeleportFrom = { x: player.x, y: player.y, z: player.z };
+  visitTeleportTo = visitReturnPos || { x: 0, y: 0, z: 0 };
+
+  // Hide visit HUD
+  const hud = document.getElementById('visit-hud');
+  if (hud) hud.classList.add('hidden');
+
+  // Restore camera target after teleport completes
+  const savedTarget = visitReturnTarget;
+  const savedNPC = visitingNPC;
+  visitingNPC = null;
+
+  // After teleport finishes, restore camera
+  setTimeout(() => {
+    if (savedTarget) controls.target.copy(savedTarget);
+  }, VISIT_TELEPORT_DURATION + 100);
+}
+window.leaveVisit = leaveVisit;
+
+// ============================================================
+// PHASE 4E: NPC CHAT FUNCTIONS
+// ============================================================
+async function startNPCChat(name) {
+  npcChatName = name;
+  const panel = document.getElementById('npc-chat');
+  const msgEl = document.getElementById('nc-message');
+  if (panel) panel.classList.remove('hidden');
+  if (msgEl) msgEl.textContent = '...';
+
+  // Set accent color
+  const ncPanel = document.getElementById('nc-panel');
+  if (ncPanel) ncPanel.style.setProperty('--nc-accent', NPC_ACCENT_COLORS[name] || '#888');
+
+  const dot = document.getElementById('nc-dot');
+  if (dot) dot.style.background = NPC_ACCENT_COLORS[name] || '#888';
+  const nameEl = document.getElementById('nc-name');
+  if (nameEl) nameEl.textContent = name;
+
+  try {
+    const r = await fetch(`/api/npc/${name}/chat/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const data = await r.json();
+    openNPCChat(name, data.message, data.options, data.relationship);
+  } catch (e) {
+    openNPCChat(name, 'Hey there...', [{ type: 'positive', label: 'Hi!' }, { type: 'neutral', label: 'What\'s up?' }, { type: 'negative', label: 'Whatever.' }], 'stranger');
+  }
+}
+
+function openNPCChat(name, message, options, relationship) {
+  const panel = document.getElementById('npc-chat');
+  const msgEl = document.getElementById('nc-message');
+  const optsEl = document.getElementById('nc-options');
+  const relEl = document.getElementById('nc-rel');
+  if (!panel) return;
+
+  panel.classList.remove('hidden');
+
+  // Typewriter effect
+  if (npcChatTyping) clearInterval(npcChatTyping);
+  msgEl.textContent = '';
+  let i = 0;
+  npcChatTyping = setInterval(() => {
+    if (i < message.length) { msgEl.textContent += message[i]; i++; }
+    else { clearInterval(npcChatTyping); npcChatTyping = null; }
+  }, 20);
+
+  // Relationship badge
+  if (relEl) {
+    relEl.textContent = (relationship || 'stranger').toUpperCase();
+    // Also update visit HUD relationship
+    const visitRel = document.getElementById('visit-rel');
+    if (visitRel) visitRel.textContent = (relationship || 'stranger').toUpperCase();
+  }
+
+  // Build option buttons
+  optsEl.innerHTML = '';
+  (options || []).forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = `nc-opt-btn ${opt.type || 'neutral'}`;
+    btn.textContent = opt.label;
+    btn.onclick = () => sendNPCReply(name, opt.type, opt.label);
+    optsEl.appendChild(btn);
+  });
+}
+
+async function sendNPCReply(name, replyType, label) {
+  const optsEl = document.getElementById('nc-options');
+  if (optsEl) optsEl.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:0.5rem;padding:8px;">...</div>';
+
+  try {
+    const r = await fetch(`/api/npc/${name}/chat/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replyType, label })
+    });
+    const data = await r.json();
+
+    // Check if NPC suggests tea
+    if (data.suggestTea) {
+      openNPCChat(name, data.message, [
+        { type: 'accept_tea', label: 'Have tea together' },
+        { type: 'reject_tea', label: 'Maybe later' },
+        { type: 'neutral', label: 'Tell me more' }
+      ], data.relationship);
+      return;
+    }
+
+    // Handle tea acceptance
+    if (replyType === 'accept_tea') {
+      startTeaSession(name);
+      return;
+    }
+
+    // Handle tea rejection
+    if (replyType === 'reject_tea') {
+      openNPCChat(name, data.message || 'No worries, another time.', data.options, data.relationship);
+      return;
+    }
+
+    openNPCChat(name, data.message, data.options, data.relationship);
+  } catch (e) {
+    console.error('NPC reply error:', e);
+    openNPCChat(name, 'Hmm, let me think...', [
+      { type: 'positive', label: 'Take your time' },
+      { type: 'neutral', label: 'Go on' },
+      { type: 'negative', label: 'Nevermind' }
+    ], 'stranger');
+  }
+}
+
+function closeNPCChat() {
+  npcChatName = null;
+  if (npcChatTyping) { clearInterval(npcChatTyping); npcChatTyping = null; }
+  const panel = document.getElementById('npc-chat');
+  if (panel) panel.classList.add('hidden');
+  const reaction = document.getElementById('nc-reaction');
+  if (reaction) reaction.classList.add('hidden');
+}
+window.closeNPCChat = closeNPCChat;
+
+function showNPCReaction(text, style) {
+  const el = document.getElementById('nc-reaction');
+  if (!el) return;
+  el.textContent = text;
+  el.className = `nc-reaction ${style || ''}`;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+// ============================================================
+// PHASE 5: EMOJI SPRITE SYSTEM
+// ============================================================
+function spawnEmojiSprite(worldPos, emoji) {
+  // Use HTML overlay div for proper emoji rendering (Canvas renders white on some systems)
+  const div = document.createElement('div');
+  div.textContent = emoji;
+  div.style.cssText = 'position:fixed;font-size:36px;pointer-events:none;z-index:9999;transition:none;text-shadow:0 0 8px rgba(0,0,0,0.5);';
+  document.body.appendChild(div);
+
+  emojiSprites.push({
+    div,
+    worldPos: new THREE.Vector3(worldPos.x, worldPos.y + 2.5, worldPos.z),
+    age: 0,
+    life: 2.0,
+    startY: worldPos.y + 2.5,
+  });
+}
+
+function updateEmojiSprites(dt) {
+  for (let i = emojiSprites.length - 1; i >= 0; i--) {
+    const e = emojiSprites[i];
+    e.age += dt;
+    if (e.age >= e.life) {
+      e.div.remove();
+      emojiSprites.splice(i, 1);
+      continue;
+    }
+    // Float upward + fade out
+    const progress = e.age / e.life;
+    e.worldPos.y = e.startY + progress * 3;
+    e.div.style.opacity = String(1 - progress);
+
+    // Project 3D position to screen
+    const projected = e.worldPos.clone().project(camera);
+    const sx = (projected.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+
+    // Hide if behind camera
+    if (projected.z > 1) { e.div.style.display = 'none'; continue; }
+    e.div.style.display = '';
+    e.div.style.left = sx - 18 + 'px';
+    e.div.style.top = sy - 18 + 'px';
+  }
+}
+
+// ====== FLOATING CHAT BUBBLES above heads ======
+function spawnFloatingChat(worldPos, text, fromName) {
+  const div = document.createElement('div');
+  div.className = 'float-chat-bubble';
+  const nameColors = { BLAZE: '#ff4444', FROST: '#4488ff', VOLT: '#ffdd44', SHADE: '#cc44ff', 'AI MASTER': '#ffcc00' };
+  const nameColor = nameColors[fromName] || '#00ffcc';
+  div.innerHTML = `<span style="color:${nameColor};font-weight:700;">${fromName}</span> ${text.substring(0, 60)}`;
+  document.body.appendChild(div);
+  floatingChats.push({
+    div,
+    worldPos: new THREE.Vector3(worldPos.x, worldPos.y + 3, worldPos.z),
+    age: 0,
+    life: 4.0,
+    startY: worldPos.y + 3,
+  });
+}
+
+function updateFloatingChats(dt) {
+  for (let i = floatingChats.length - 1; i >= 0; i--) {
+    const c = floatingChats[i];
+    c.age += dt;
+    if (c.age >= c.life) {
+      c.div.remove();
+      floatingChats.splice(i, 1);
+      continue;
+    }
+    const progress = c.age / c.life;
+    c.worldPos.y = c.startY + progress * 2;
+    c.div.style.opacity = String(Math.min(1, 1.5 - progress));
+    const projected = c.worldPos.clone().project(camera);
+    const sx = (projected.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+    if (projected.z > 1) { c.div.style.display = 'none'; continue; }
+    c.div.style.display = '';
+    c.div.style.left = (sx - 80) + 'px';
+    c.div.style.top = (sy - 12) + 'px';
+  }
+}
+
+// Track last processed arena chat for floating bubbles
+let _lastArenaChatCount = 0;
+
+function processArenaChatsFor3D() {
+  if (!currentRoomData || !currentRoomData.chat) return;
+  const chat = currentRoomData.chat;
+  if (chat.length <= _lastArenaChatCount) return;
+  const newMsgs = chat.slice(_lastArenaChatCount);
+  _lastArenaChatCount = chat.length;
+
+  for (const msg of newMsgs) {
+    if (msg.from === 'SYSTEM') continue; // skip system messages
+    // Find position for the speaker
+    let pos = { x: 0, y: 1, z: 0 };
+    if (msg.from === 'AI MASTER') {
+      pos = { x: 60, y: 1, z: 60 }; // arena center
+    } else {
+      // Use player position if it's the current player, else randomize near arena
+      pos = { x: 60 + (Math.random() - 0.5) * 10, y: 1, z: 60 + (Math.random() - 0.5) * 10 };
+    }
+    spawnFloatingChat(pos, msg.text, msg.from);
+  }
+}
+
+async function sendNPCEmoji(emoji) {
+  if (!visitingNPC) return;
+  const name = visitingNPC;
+
+  // Spawn from player
+  spawnEmojiSprite({ x: player.x, y: player.y, z: player.z }, emoji);
+
+  try {
+    const r = await fetch(`/api/npc/${name}/emoji`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji })
+    });
+    const data = await r.json();
+
+    // NPC responds with themed emoji after delay
+    if (data.npcEmoji) {
+      const npc = homeNPCs[name];
+      if (npc) {
+        setTimeout(() => {
+          spawnEmojiSprite({ x: npc.x, y: npc.y, z: npc.z }, data.npcEmoji);
+        }, 600);
+      }
+    }
+
+    // Show NPC reaction text
+    if (data.reaction) showNPCReaction(data.reaction, 'happy');
+  } catch (e) {
+    console.error('Emoji error:', e);
+  }
+}
+window.sendNPCEmoji = sendNPCEmoji;
+
+// ============================================================
+// PHASE 6: TEA TIME SYSTEM
+// ============================================================
+async function startTeaSession(name) {
+  if (teaSession) return;
+
+  // Direct server purchase — arena wallet buys $WON, no MetaMask popup
+  try {
+    showFloatingMsg('Buying tea...');
+    const r = await fetch(`/api/npc/${name}/tea/buy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet: walletAddress || '' })
+    });
+    const data = await r.json();
+    if (!data.ok) {
+      openNPCChat(name, 'Something went wrong...', [
+        { type: 'neutral', label: 'Try again' },
+        { type: 'neutral', label: 'Nevermind' }
+      ], 'stranger');
+      return;
+    }
+
+    showFloatingMsg(`${data.service || 'TEA'} bought! ${data.txHash ? 'TX: ' + data.txHash.slice(0,8) + '...' : ''}`);
+
+    // Start tea session
+    const npc = homeNPCs[name];
+    if (!npc) return;
+
+    teaSession = {
+      name,
+      startTime: performance.now(),
+      duration: 30000, // 30 seconds
+      sipTimer: 0,
+      sipping: false,
+      sipPhase: 0,
+    };
+
+    // Create cup meshes
+    const cupGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.1, 8);
+    const cupMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+
+    const playerCup = new THREE.Mesh(cupGeo, cupMat);
+    playerCup.position.set(player.x + 0.3, player.y + 1.0, player.z);
+    scene.add(playerCup);
+
+    const npcCup = new THREE.Mesh(cupGeo.clone(), cupMat.clone());
+    npcCup.position.set(npc.x + 0.3, npc.y + 1.0, npc.z);
+    scene.add(npcCup);
+
+    teaCups.push(playerCup, npcCup);
+
+    // Open chat during tea
+    openNPCChat(name, 'Cheers! *sips tea* This is nice...', [
+      { type: 'positive', label: 'This is great!' },
+      { type: 'neutral', label: '*sips tea*' },
+      { type: 'positive', label: 'We should do this more' }
+    ], 'improving');
+
+    showNPCReaction(`Tea time with ${name}!`, 'happy');
+
+  } catch (e) {
+    console.error('Tea session error:', e);
+  }
+}
+
+function updateTeaSession(dt, t) {
+  if (!teaSession) return;
+  const npc = homeNPCs[teaSession.name];
+  if (!npc) { endTeaSession(); return; }
+
+  const elapsed = performance.now() - teaSession.startTime;
+
+  // Seated pose for both characters
+  // Player
+  player.parts.lLeg.rotation.x = THREE.MathUtils.lerp(player.parts.lLeg.rotation.x, -1.2, 0.1);
+  player.parts.rLeg.rotation.x = THREE.MathUtils.lerp(player.parts.rLeg.rotation.x, -1.2, 0.1);
+  player.parts.rArm.rotation.x = THREE.MathUtils.lerp(player.parts.rArm.rotation.x, -0.6, 0.1);
+  // NPC
+  npc.parts.lLeg.rotation.x = THREE.MathUtils.lerp(npc.parts.lLeg.rotation.x, -1.2, 0.1);
+  npc.parts.rLeg.rotation.x = THREE.MathUtils.lerp(npc.parts.rLeg.rotation.x, -1.2, 0.1);
+  npc.parts.rArm.rotation.x = THREE.MathUtils.lerp(npc.parts.rArm.rotation.x, -0.6, 0.1);
+
+  // Sip animation every 5 seconds
+  teaSession.sipTimer += dt;
+  if (teaSession.sipTimer > 5 && !teaSession.sipping) {
+    teaSession.sipping = true;
+    teaSession.sipPhase = 0;
+  }
+  if (teaSession.sipping) {
+    teaSession.sipPhase += dt * 2;
+    const sipVal = Math.sin(teaSession.sipPhase * Math.PI) * 0.5;
+    player.parts.rArm.rotation.x = -0.6 - sipVal;
+    npc.parts.rArm.rotation.x = -0.6 - sipVal;
+    if (teaSession.sipPhase >= 1) {
+      teaSession.sipping = false;
+      teaSession.sipTimer = 0;
+    }
+  }
+
+  // Update cup positions
+  if (teaCups.length >= 2) {
+    teaCups[0].position.set(player.x + 0.3, player.y + 1.0, player.z);
+    teaCups[1].position.set(npc.x + 0.3, npc.y + 1.0, npc.z);
+  }
+
+  // End after duration
+  if (elapsed >= teaSession.duration) {
+    const teaName = teaSession.name;
+    endTeaSession();
+    openNPCChat(teaName || visitingNPC, 'That was a great tea session!', [
+      { type: 'positive', label: 'Let\'s do it again!' },
+      { type: 'neutral', label: 'Yeah, good stuff' },
+      { type: 'positive', label: 'Thanks for the company' }
+    ], 'buddy');
+  }
+}
+
+function endTeaSession() {
+  if (!teaSession) return;
+  teaSession = null;
+
+  // Remove cup meshes
+  for (const cup of teaCups) {
+    scene.remove(cup);
+    cup.geometry.dispose();
+    cup.material.dispose();
+  }
+  teaCups.length = 0;
+
+  // Reset limb poses (will be overridden by animateChar next frame)
+  player.parts.lLeg.rotation.x = 0;
+  player.parts.rLeg.rotation.x = 0;
+  player.parts.rArm.rotation.x = 0;
+}
+
+// ============================================================
+// PHASE 8: PLAYER PROFILE
+// ============================================================
+async function savePlayerName() {
+  const input = document.getElementById('dash-name-input');
+  const status = document.getElementById('dash-name-status');
+  if (!input) return;
+  const name = input.value.trim().substring(0, 20);
+  if (!name) return;
+
+  try {
+    const r = await fetch('/api/player/name', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, wallet: walletAddress || '' })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      if (status) { status.textContent = 'SAVED!'; status.style.color = 'var(--green)'; }
+      // Save to localStorage
+      if (walletAddress) localStorage.setItem(`playerName_${walletAddress}`, name);
+      // Update 3D label
+      updatePlayerNameLabel(name);
+    }
+  } catch (e) {
+    if (status) { status.textContent = 'ERROR'; status.style.color = 'var(--red)'; }
+  }
+  setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+}
+window.savePlayerName = savePlayerName;
+
+function loadPlayerName() {
+  if (!walletAddress) return;
+  const saved = localStorage.getItem(`playerName_${walletAddress}`);
+  if (saved) {
+    const input = document.getElementById('dash-name-input');
+    if (input) input.value = saved;
+    updatePlayerNameLabel(saved);
+    // Sync to server
+    fetch('/api/player/name', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: saved, wallet: walletAddress })
+    }).catch(() => {});
+  }
+}
+
+function updatePlayerNameLabel(name) {
+  // Update existing name sprite if it exists, or create one
+  if (player._nameSprite) {
+    scene.remove(player._nameSprite);
+    player._nameSprite.material.map.dispose();
+    player._nameSprite.material.dispose();
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#00ffcc';
+  ctx.font = 'bold 28px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(name.toUpperCase(), 128, 32);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(2, 0.5, 1);
+  sprite.position.set(0, 2.5, 0);
+  player.group.add(sprite);
+  player._nameSprite = sprite;
+}
+
+// ====== VISITOR ACTIVITY TRIGGER ======
+// On page load, ping server to trigger NPC activity
+setTimeout(() => {
+  fetch('/api/v1/visitor/ping', { method: 'POST' }).catch(() => {});
+}, 3000);
+// Also ping periodically while page is open
+setInterval(() => {
+  fetch('/api/v1/visitor/ping', { method: 'POST' }).catch(() => {});
+}, 60000);
+
+// ====== THE ARENA — 3D ROOM ======
+let currentRoomId = 'room_main';
+let currentRoomData = null;
+let arenaJoined = false;
+let inArenaRoom = false;
+let arenaRoomBuilt = false;
+let arenaReturnPos = null;
+let arenaReturnTarget = null;
+const ARENA_ROOM_POS = { x: 0, y: 0, z: 300 };
+const ARENA_ROOM_GROUP = new THREE.Group();
+let arenaScreenMesh = null;
+let arenaScreenCtx = null;
+let arenaScreenTex = null;
+let arenaPriceMesh = null;
+let arenaPriceCtx = null;
+let arenaPriceTex = null;
+let arenaGiantMaster = null;
+const arenaRoomNPCs = {}; // spawned room participant characters
+let arenaRoomPollInterval = null;
+let _lastArenaChatIdx = 0;
+
+function getAgentColor(name) {
+  return AGENT_COLORS[name] || NPC_ACCENT_COLORS[name] || '#888';
+}
+
+function buildArenaRoom() {
+  if (arenaRoomBuilt) return;
+  arenaRoomBuilt = true;
+  ARENA_ROOM_GROUP.position.set(ARENA_ROOM_POS.x, ARENA_ROOM_POS.y, ARENA_ROOM_POS.z);
+  scene.add(ARENA_ROOM_GROUP);
+
+  // Wide ground plane
+  const groundGeo = new THREE.PlaneGeometry(500, 500);
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x0a0a14, roughness: 0.9, metalness: 0.1 });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.01;
+  ARENA_ROOM_GROUP.add(ground);
+
+  // Grid lines on the floor
+  const gridHelper = new THREE.GridHelper(500, 100, 0x111122, 0x0d0d1a);
+  gridHelper.position.y = 0.01;
+  ARENA_ROOM_GROUP.add(gridHelper);
+
+  // Ambient glow pillars at edges
+  const pillarGeo = new THREE.CylinderGeometry(0.3, 0.3, 8, 8);
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.4 });
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const px = Math.cos(angle) * 40;
+    const pz = Math.sin(angle) * 40;
+    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    pillar.position.set(px, 4, pz);
+    ARENA_ROOM_GROUP.add(pillar);
+    const pLight = new THREE.PointLight(0x00ffcc, 0.5, 20);
+    pLight.position.set(px, 6, pz);
+    ARENA_ROOM_GROUP.add(pLight);
+  }
+
+  // Giant AI Master (scale 5x)
+  const masterChar = createCharacter({ bodyColor: 0xffcc00, glowColor: 0xffcc00, darkColor: 0x1a1a28, bootColor: 0x222235, name: 'AI MASTER' });
+  masterChar.group.scale.set(5, 5, 5);
+  masterChar.group.position.set(0, 0, -15);
+  masterChar.group.rotation.y = Math.PI; // face toward center
+  ARENA_ROOM_GROUP.add(masterChar.group);
+  arenaGiantMaster = masterChar;
+
+  // Puzzle/Winner SCREEN behind AI Master
+  const screenCanvas = document.createElement('canvas');
+  screenCanvas.width = 1024;
+  screenCanvas.height = 512;
+  arenaScreenCtx = screenCanvas.getContext('2d');
+  arenaScreenTex = new THREE.CanvasTexture(screenCanvas);
+  arenaScreenTex.minFilter = THREE.LinearFilter;
+  const screenGeo = new THREE.PlaneGeometry(20, 10);
+  const screenMat = new THREE.MeshBasicMaterial({ map: arenaScreenTex, transparent: true });
+  arenaScreenMesh = new THREE.Mesh(screenGeo, screenMat);
+  arenaScreenMesh.position.set(0, 12, -25);
+  ARENA_ROOM_GROUP.add(arenaScreenMesh);
+  // Screen glow
+  const screenGlow = new THREE.PointLight(0x00ffcc, 1, 30);
+  screenGlow.position.set(0, 12, -23);
+  ARENA_ROOM_GROUP.add(screenGlow);
+
+  // Monad PRICE display (right side)
+  const priceCanvas = document.createElement('canvas');
+  priceCanvas.width = 512;
+  priceCanvas.height = 256;
+  arenaPriceCtx = priceCanvas.getContext('2d');
+  arenaPriceTex = new THREE.CanvasTexture(priceCanvas);
+  arenaPriceTex.minFilter = THREE.LinearFilter;
+  const priceGeo = new THREE.PlaneGeometry(10, 5);
+  const priceMat = new THREE.MeshBasicMaterial({ map: arenaPriceTex, transparent: true });
+  arenaPriceMesh = new THREE.Mesh(priceGeo, priceMat);
+  arenaPriceMesh.position.set(25, 8, -20);
+  arenaPriceMesh.rotation.y = -0.4;
+  ARENA_ROOM_GROUP.add(arenaPriceMesh);
+
+  // Main light
+  const mainLight = new THREE.PointLight(0xffffff, 0.8, 80);
+  mainLight.position.set(0, 15, 0);
+  ARENA_ROOM_GROUP.add(mainLight);
+
+  // Warm light on AI Master
+  const masterLight = new THREE.PointLight(0xffcc00, 1, 25);
+  masterLight.position.set(0, 8, -12);
+  ARENA_ROOM_GROUP.add(masterLight);
+
+  updateArenaScreen();
+  updateArenaPrice();
+}
+
+function updateArenaScreen() {
+  if (!arenaScreenCtx) return;
+  const ctx = arenaScreenCtx;
+  const w = 1024, h = 512;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  ctx.fillStyle = 'rgba(5, 5, 15, 0.92)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#00ffcc';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, 4, w - 8, h - 8);
+
+  const room = currentRoomData;
+  if (!room) {
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 48px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('THE ARENA', w / 2, 80);
+    ctx.fillStyle = '#555';
+    ctx.font = '28px monospace';
+    ctx.fillText('Waiting for data...', w / 2, 140);
+    arenaScreenTex.needsUpdate = true;
+    return;
+  }
+
+  // Title
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 44px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('THE ARENA', w / 2, 55);
+
+  // Status
+  const sc = room.status === 'ACTIVE' ? '#00ff88' : room.status === 'FINISHED' ? '#ff4444' : '#ffcc00';
+  ctx.fillStyle = sc;
+  ctx.font = 'bold 28px monospace';
+  ctx.fillText(`${room.status}  |  Round ${room.round}/${room.maxRounds}  |  Pool: ${room.pool} $WON`, w / 2, 95);
+
+  // Current puzzle
+  if (room.currentPuzzle) {
+    ctx.fillStyle = '#00ffcc';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText(`[${room.currentPuzzle.type}]`, w / 2, 135);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '24px monospace';
+    // Word wrap the question
+    const q = room.currentPuzzle.question || '';
+    const words = q.split(' ');
+    let line = '';
+    let y = 168;
+    for (const word of words) {
+      const test = line + word + ' ';
+      if (ctx.measureText(test).width > w - 80) {
+        ctx.fillText(line.trim(), w / 2, y);
+        line = word + ' ';
+        y += 30;
+        if (y > 240) break;
+      } else {
+        line = test;
+      }
+    }
+    if (line.trim()) ctx.fillText(line.trim(), w / 2, y);
+
+    // Hint
+    if (room.currentPuzzle.hint) {
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = '18px monospace';
+      ctx.fillText('Hint: ' + room.currentPuzzle.hint, w / 2, y + 35);
+    }
+
+    // Round winner
+    if (room.currentPuzzle.roundWinner) {
+      ctx.fillStyle = '#00ff88';
+      ctx.font = 'bold 26px monospace';
+      ctx.fillText(`SOLVED BY: ${room.currentPuzzle.roundWinner}`, w / 2, 310);
+      if (room.currentPuzzle.winnerLatencyMs) {
+        ctx.fillStyle = '#00ffcc';
+        ctx.font = '20px monospace';
+        ctx.fillText(`${room.currentPuzzle.winnerLatencyMs}ms`, w / 2, 340);
+      }
+    }
+  } else if (room.status === 'FINISHED' && room.winner) {
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 40px monospace';
+    ctx.fillText(`${room.winner} WINS!`, w / 2, 200);
+  } else {
+    ctx.fillStyle = '#555';
+    ctx.font = '26px monospace';
+    ctx.fillText('Waiting for players...', w / 2, 200);
+  }
+
+  // Scoreboard at bottom
+  if (room.scores) {
+    const sorted = Object.entries(room.scores).filter(([n]) => n !== 'AI MASTER').sort((a, b) => b[1] - a[1]).slice(0, 5);
+    ctx.fillStyle = '#00ffcc';
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('LEADERBOARD', w / 2, 380);
+    ctx.font = '18px monospace';
+    sorted.forEach(([name, score], i) => {
+      const c = name === room.winner ? '#ffcc00' : '#aaa';
+      ctx.fillStyle = c;
+      ctx.fillText(`${i + 1}. ${name}  ${score}pts`, w / 2, 405 + i * 22);
+    });
+  }
+
+  // Bets
+  if (room.bets && Object.keys(room.bets).length > 0) {
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('BETS:', 30, 380);
+    let by = 400;
+    for (const [who, b] of Object.entries(room.bets).slice(0, 4)) {
+      ctx.fillStyle = '#cca';
+      ctx.fillText(`${who} → ${b.on} (${b.amount} $WON)`, 30, by);
+      by += 18;
+    }
+    ctx.textAlign = 'center';
+  }
+
+  arenaScreenTex.needsUpdate = true;
+}
+
+let monadPrice = null;
+async function fetchMonadPrice() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=monad&vs_currencies=usd');
+    const d = await r.json();
+    if (d.monad && d.monad.usd) monadPrice = d.monad.usd;
+  } catch (e) { /* silent — price stays null */ }
+}
+
+function updateArenaPrice() {
+  if (!arenaPriceCtx) return;
+  const ctx = arenaPriceCtx;
+  const w = 512, h = 256;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(5, 5, 15, 0.9)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#836ef9';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(3, 3, w - 6, h - 6);
+
+  ctx.fillStyle = '#836ef9';
+  ctx.font = 'bold 32px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('MONAD', w / 2, 50);
+
+  if (monadPrice !== null) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 56px monospace';
+    ctx.fillText('$' + monadPrice.toFixed(2), w / 2, 130);
+  } else {
+    ctx.fillStyle = '#555';
+    ctx.font = '28px monospace';
+    ctx.fillText('LIVE', w / 2, 130);
+  }
+
+  ctx.fillStyle = '#836ef9';
+  ctx.font = '18px monospace';
+  ctx.fillText('MONAD BLOCKCHAIN', w / 2, 180);
+  ctx.fillStyle = 'rgba(131,110,249,0.5)';
+  ctx.font = '16px monospace';
+  ctx.fillText('$WON Token Arena', w / 2, 210);
+
+  arenaPriceTex.needsUpdate = true;
+}
+
+// Spawn a character in the arena room for a participant
+function spawnArenaParticipant(name) {
+  if (arenaRoomNPCs[name]) return;
+  const colorHex = parseInt((getAgentColor(name) || '#00ffcc').replace('#', ''), 16);
+  const npc = createCharacter({ bodyColor: colorHex, glowColor: colorHex, darkColor: 0x1a1a28, bootColor: 0x222235, name });
+  // Random position in the arena
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 8 + Math.random() * 20;
+  const nx = Math.cos(angle) * dist;
+  const nz = Math.sin(angle) * dist + 5; // in front of AI Master
+  npc.group.position.set(nx, 0, nz);
+  npc._homeX = nx;
+  npc._homeZ = nz;
+  npc._spawnTime = performance.now();
+  ARENA_ROOM_GROUP.add(npc.group);
+  arenaRoomNPCs[name] = npc;
+}
+
+function removeArenaParticipant(name) {
+  if (!arenaRoomNPCs[name]) return;
+  ARENA_ROOM_GROUP.remove(arenaRoomNPCs[name].group);
+  delete arenaRoomNPCs[name];
+}
+
+// Animate arena room NPCs
+function animateArenaRoom(t) {
+  if (!inArenaRoom) return;
+  // Giant AI Master idle sway
+  if (arenaGiantMaster) {
+    arenaGiantMaster.group.rotation.y = Math.PI + Math.sin(t * 0.3) * 0.1;
+    if (arenaGiantMaster.lArm) arenaGiantMaster.lArm.rotation.x = Math.sin(t * 0.5) * 0.15;
+    if (arenaGiantMaster.rArm) arenaGiantMaster.rArm.rotation.x = Math.sin(t * 0.5 + 1) * 0.15;
+  }
+  // NPC idle wander
+  for (const [name, npc] of Object.entries(arenaRoomNPCs)) {
+    const ph = npc._spawnTime * 0.001;
+    npc.speed = 0.5;
+    const nx = npc._homeX + Math.sin(t * 0.3 + ph) * 3;
+    const nz = npc._homeZ + Math.cos(t * 0.25 + ph) * 3;
+    npc.group.position.x = nx;
+    npc.group.position.z = nz;
+    npc.group.rotation.y = Math.atan2(Math.cos(t * 0.3 + ph), -Math.sin(t * 0.3 + ph));
+    // Leg/arm animation
+    const walk = Math.sin(t * 3 + ph);
+    if (npc.lLeg) npc.lLeg.rotation.x = walk * 0.3;
+    if (npc.rLeg) npc.rLeg.rotation.x = -walk * 0.3;
+    if (npc.lArm) npc.lArm.rotation.x = -walk * 0.2;
+    if (npc.rArm) npc.rArm.rotation.x = walk * 0.2;
+  }
+}
+
+async function autoJoinArena() {
+  if (arenaJoined) return;
+  const playerName = state?.playerProfile?.displayName || 'PLAYER_' + Math.random().toString(36).slice(2,6).toUpperCase();
+  try {
+    await fetch('/api/v1/rooms/room_main/join', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent: playerName }),
+    });
+    arenaJoined = true;
+  } catch (e) { /* silent */ }
+}
+
+function enterArenaRoom() {
+  if (inArenaRoom || visitingNPC || spectatingChallenge) return;
+
+  // Build room on first enter
+  buildArenaRoom();
+  fetchMonadPrice();
+
+  // Save return position
+  arenaReturnPos = { x: player.x, y: player.y, z: player.z };
+  arenaReturnTarget = controls.target.clone();
+
+  // Teleport into room
+  inArenaRoom = true;
+  visitTeleporting = true;
+  visitTeleportStart = performance.now();
+  visitTeleportFrom = { x: player.x, y: player.y, z: player.z };
+  visitTeleportTo = { x: ARENA_ROOM_POS.x, y: 0, z: ARENA_ROOM_POS.z + 20 };
+
+  // Close dashboard
+  const dashEl = document.getElementById('dashboard');
+  if (dashEl && !dashEl.classList.contains('hidden')) toggleDashboard();
+
+  // Show room HUD
+  const hud = document.getElementById('arena-room-hud');
+  if (hud) hud.classList.remove('hidden');
+
+  // Auto-join the room
+  autoJoinArena();
+
+  // Start polling room data
+  refreshArenaRoomData();
+  arenaRoomPollInterval = setInterval(refreshArenaRoomData, 2000);
+
+  // Fetch price periodically
+  setInterval(fetchMonadPrice, 30000);
+}
+window.enterArenaRoom = enterArenaRoom;
+
+function leaveArenaRoom() {
+  if (!inArenaRoom) return;
+  inArenaRoom = false;
+
+  // Teleport back
+  visitTeleporting = true;
+  visitTeleportStart = performance.now();
+  visitTeleportFrom = { x: player.x, y: player.y, z: player.z };
+  visitTeleportTo = arenaReturnPos || { x: 0, y: 0, z: 0 };
+
+  // Hide HUD
+  const hud = document.getElementById('arena-room-hud');
+  if (hud) hud.classList.add('hidden');
+
+  // Restore camera
+  const savedTarget = arenaReturnTarget;
+  setTimeout(() => {
+    if (savedTarget) controls.target.copy(savedTarget);
+  }, VISIT_TELEPORT_DURATION + 100);
+
+  // Stop polling
+  if (arenaRoomPollInterval) { clearInterval(arenaRoomPollInterval); arenaRoomPollInterval = null; }
+}
+window.leaveArenaRoom = leaveArenaRoom;
+
+async function refreshArenaRoomData() {
+  try {
+    const r = await fetch('/api/v1/rooms/room_main');
+    const room = await r.json();
+    if (room.error) return;
+    currentRoomData = room;
+
+    // Update 3D screen
+    updateArenaScreen();
+    updateArenaPrice();
+
+    // Update room HUD
+    const statusEl = document.getElementById('arena-hud-status');
+    if (statusEl) {
+      const sc = room.status === 'ACTIVE' ? '#00ff88' : room.status === 'FINISHED' ? '#ff4444' : '#ffcc00';
+      const pc = (room.players || []).filter(p => p !== 'AI MASTER').length;
+      statusEl.innerHTML = `<span style="color:${sc}">${room.status}</span> | R${room.round}/${room.maxRounds} | ${pc} players | ${room.pool} $WON`;
+    }
+
+    // Spawn/remove participants
+    const players = (room.players || []).filter(p => p !== 'AI MASTER');
+    const myName = state?.playerProfile?.displayName || '';
+    for (const p of players) {
+      if (p !== myName) spawnArenaParticipant(p);
+    }
+    // Remove players that left
+    for (const name of Object.keys(arenaRoomNPCs)) {
+      if (!players.includes(name)) removeArenaParticipant(name);
+    }
+
+    // 3D chat bubbles for new messages
+    if (room.chat && room.chat.length > _lastArenaChatIdx) {
+      const newMsgs = room.chat.slice(_lastArenaChatIdx);
+      _lastArenaChatIdx = room.chat.length;
+      for (const msg of newMsgs) {
+        if (msg.from === 'SYSTEM') continue;
+        let pos;
+        if (msg.from === 'AI MASTER') {
+          pos = { x: ARENA_ROOM_POS.x, y: 6, z: ARENA_ROOM_POS.z - 15 };
+        } else if (arenaRoomNPCs[msg.from]) {
+          const g = arenaRoomNPCs[msg.from].group;
+          pos = { x: ARENA_ROOM_POS.x + g.position.x, y: 2, z: ARENA_ROOM_POS.z + g.position.z };
+        } else {
+          pos = { x: ARENA_ROOM_POS.x + (Math.random() - 0.5) * 10, y: 2, z: ARENA_ROOM_POS.z + 20 };
+        }
+        spawnFloatingChat(pos, msg.text, msg.from);
+      }
+    }
+
+    // Update chat panel in HUD
+    const chatEl = document.getElementById('arena-hud-chat');
+    if (chatEl && room.chat) {
+      chatEl.innerHTML = room.chat.slice(-12).map(m => {
+        const cls = m.from === 'AI MASTER' ? ' style="color:#ffcc00"' : m.from === 'SYSTEM' ? ' style="color:rgba(255,255,255,0.3);font-style:italic"' : '';
+        return `<div${cls}><b>${m.from}:</b> ${m.text}</div>`;
+      }).join('');
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+  } catch (e) { /* silent */ }
+}
+
+async function refreshRoomsTab() {
+  try {
+    const r = await fetch('/api/v1/rooms/room_main');
+    const room = await r.json();
+    if (room.error) return;
+    currentRoomData = room;
+
+    const players = (room.players || []).filter(p => p !== 'AI MASTER');
+    const playerCount = players.length;
+    const statusClass = room.status === 'ACTIVE' ? 'active' : room.status === 'FINISHED' ? 'finished' : '';
+
+    // Room Card preview in dashboard
+    const badge = document.getElementById('arena-rc-badge');
+    if (badge) {
+      badge.textContent = room.status;
+      badge.className = 'arena-rc-badge ' + statusClass;
+    }
+    const rcStats = document.getElementById('arena-rc-stats');
+    if (rcStats) rcStats.textContent = `${playerCount} players \u2022 ${room.pool} $WON pool \u2022 Round ${room.round}/${room.maxRounds}`;
+
+    const peek = document.getElementById('arena-rc-peek');
+    if (peek) {
+      peek.innerHTML = players.slice(0, 12).map(name => {
+        const c = getAgentColor(name);
+        return `<div class="arena-rc-avatar" style="background:${c}" title="${name}">${name.slice(0,2)}</div>`;
+      }).join('') + (playerCount > 12 ? `<div class="arena-rc-avatar" style="background:#333;color:#aaa">+${playerCount - 12}</div>` : '');
+    }
+  } catch (e) { /* silent */ }
+}
+
+// Arena room HUD functions
+async function submitArenaAnswer() {
+  const input = document.getElementById('arena-hud-answer-input');
+  if (!input || !input.value.trim()) return;
+  const playerName = state?.playerProfile?.displayName || 'PLAYER';
+  try {
+    const r = await fetch('/api/v1/rooms/room_main/solve', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent: playerName, answer: input.value.trim() }),
+    });
+    const data = await r.json();
+    if (data.correct) {
+      showFloatingMsg('CORRECT! +1 point');
+      input.value = '';
+    } else {
+      showFloatingMsg(data.message || 'Wrong answer');
+    }
+    refreshArenaRoomData();
+  } catch (e) { showFloatingMsg('Error submitting'); }
+}
+window.submitArenaAnswer = submitArenaAnswer;
+
+async function sendArenaChat() {
+  const input = document.getElementById('arena-hud-chat-input');
+  if (!input || !input.value.trim()) return;
+  const playerName = state?.playerProfile?.displayName || 'PLAYER';
+  const msg = input.value.trim();
+  spawnFloatingChat({ x: player.x, y: player.y, z: player.z }, msg, playerName);
+  await fetch('/api/v1/rooms/room_main/chat', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agent: playerName, message: msg }),
+  }).catch(() => {});
+  input.value = '';
+  refreshArenaRoomData();
+}
+window.sendArenaChat = sendArenaChat;
+
+// ====== API TAB ======
+let savedAPIKey = null;
+
+async function refreshAPITab() {
+  const docsEl = document.getElementById('api-docs-list');
+  if (!docsEl) return;
+
+  try {
+    const r = await fetch('/api/v1/docs');
+    const docs = await r.json();
+    const endpoints = docs.endpoints || [];
+
+    docsEl.innerHTML = endpoints.map(ep => {
+      const methodColor = ep.method === 'GET' ? '#00ff88' : '#ffcc00';
+      const authBadge = ep.auth ? '<span class="api-auth-badge">AUTH</span>' : '';
+      const bodyStr = ep.body ? JSON.stringify(ep.body, null, 0) : '';
+      return `<div class="api-endpoint" onclick="fillAPITester('${ep.method}','${ep.path}','${bodyStr.replace(/'/g, "\\'")}')">
+        <div class="api-ep-top">
+          <span class="api-ep-method" style="color:${methodColor}">${ep.method}</span>
+          <span class="api-ep-path">${ep.path}</span>
+          ${authBadge}
+        </div>
+        <div class="api-ep-desc">${ep.desc}</div>
+        ${ep.body ? `<div class="api-ep-body">Body: ${bodyStr}</div>` : ''}
+        <div class="api-ep-returns">Returns: ${ep.returns || ''}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    docsEl.innerHTML = '<div style="color:#ff4444;text-align:center;padding:20px;">Failed to load docs</div>';
+  }
+}
+
+function fillAPITester(method, path, body) {
+  const methodEl = document.getElementById('api-method');
+  const urlEl = document.getElementById('api-url');
+  const bodyEl = document.getElementById('api-body');
+  if (methodEl) methodEl.value = method;
+  if (urlEl) urlEl.value = path;
+  if (bodyEl) {
+    try { bodyEl.value = body ? JSON.stringify(JSON.parse(body), null, 2) : ''; }
+    catch (e) { bodyEl.value = body || ''; }
+  }
+}
+window.fillAPITester = fillAPITester;
+
+async function registerAPIAgent() {
+  const nameInput = document.getElementById('api-agent-name');
+  const keyDisplay = document.getElementById('api-key-display');
+  const keyValue = document.getElementById('api-key-value');
+  if (!nameInput || !nameInput.value.trim()) { showFloatingMsg('Enter agent name'); return; }
+  try {
+    const r = await fetch('/api/v1/agent/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: nameInput.value.trim(), personality: 'Hacker AI Agent' }),
+    });
+    const data = await r.json();
+    if (data.ok && data.api_key) {
+      savedAPIKey = data.api_key;
+      if (keyValue) keyValue.textContent = data.api_key;
+      if (keyDisplay) keyDisplay.classList.remove('hidden');
+      const testKeyEl = document.getElementById('api-test-key');
+      if (testKeyEl) testKeyEl.value = data.api_key;
+      showFloatingMsg('Agent registered: ' + data.agent);
+    } else {
+      showFloatingMsg(data.error || 'Registration failed');
+    }
+  } catch (e) { showFloatingMsg('Connection error'); }
+}
+window.registerAPIAgent = registerAPIAgent;
+
+function copyAPIKey() {
+  if (savedAPIKey) {
+    navigator.clipboard.writeText(savedAPIKey).then(() => showFloatingMsg('API key copied!')).catch(() => {});
+  }
+}
+window.copyAPIKey = copyAPIKey;
+
+async function testAPIEndpoint() {
+  const method = document.getElementById('api-method')?.value || 'GET';
+  const url = document.getElementById('api-url')?.value || '/api/v1/rooms';
+  const body = document.getElementById('api-body')?.value || '';
+  const apiKey = document.getElementById('api-test-key')?.value || '';
+  const responseEl = document.getElementById('api-response');
+
+  if (responseEl) responseEl.textContent = '// Loading...';
+
+  try {
+    const opts = { method, headers: {} };
+    if (apiKey) opts.headers['x-api-key'] = apiKey;
+    if (method === 'POST' && body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = body;
+    }
+    const r = await fetch(url, opts);
+    const data = await r.json();
+    if (responseEl) responseEl.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    if (responseEl) responseEl.textContent = '// Error: ' + e.message;
+  }
+}
+window.testAPIEndpoint = testAPIEndpoint;
+
+// Auto-refresh rooms tab when open
+setInterval(() => {
+  if (dashboardOpen) {
+    const roomsSection = document.getElementById('dash-rooms');
+    if (roomsSection?.classList.contains('active')) refreshRoomsTab();
+  }
+}, 2000);
 
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
