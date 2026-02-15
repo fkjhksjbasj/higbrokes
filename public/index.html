@@ -3,176 +3,368 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GENESIS — AI Civilization on Monad</title>
+  <title>HIGBROKES</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header class="header">
-    <h1>GENESIS</h1>
-    <p class="tagline">Same world. Better outcomes. Why?</p>
-    <span class="cycle-badge" id="cycle-badge">Cycle #0 &middot; Initializing...</span>
-  </header>
+  <div id="scene-container">
+    <div id="loading" class="loading">INITIALIZING HIGBROKES...</div>
 
-  <!-- COMPARISON: AI WORLD vs REAL WORLD -->
-  <section class="comparison-section">
-    <!-- AI WORLD -->
-    <div class="world-panel ai">
-      <h2><span class="indicator"></span> AI WORLD</h2>
-      <div class="metric-row">
-        <span class="metric-label">GDP Growth</span>
-        <span class="metric-value winning" id="ai-gdp">--</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Inequality (Gini)</span>
-        <span class="metric-value winning" id="ai-gini">--</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Unemployment</span>
-        <span class="metric-value winning" id="ai-unemployment">--</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Poverty Rate</span>
-        <span class="metric-value winning" id="ai-poverty">--</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Corruption</span>
-        <span class="metric-value winning" id="ai-corruption">0%</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Trade Volume</span>
-        <span class="metric-value" id="ai-trades">--</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Total Circulation</span>
-        <span class="metric-value" id="ai-circulation">--</span>
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-item">
+        <span class="hud-label">CAMERA</span>
+        <span class="hud-val hud-cam" id="cam-mode">ORBIT</span>
       </div>
     </div>
 
-    <!-- REAL WORLD -->
-    <div class="world-panel real">
-      <h2><span class="indicator"></span> REAL WORLD</h2>
-      <div class="metric-row">
-        <span class="metric-label">GDP Growth</span>
-        <span class="metric-value" id="real-gdp">+2.5%</span>
+    <!-- Wallet (top-right) -->
+    <div id="wallet" class="wallet">
+      <div class="wallet-inner" id="wallet-inner">
+        <span class="wallet-icon">&#9670;</span>
+        <span class="wallet-label" id="wallet-label">CONNECT WALLET</span>
       </div>
-      <div class="metric-row">
-        <span class="metric-label">Inequality (Gini)</span>
-        <span class="metric-value" id="real-gini">0.390</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Unemployment</span>
-        <span class="metric-value" id="real-unemployment">4.0%</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Poverty Rate</span>
-        <span class="metric-value" id="real-poverty">11.5%</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Corruption</span>
-        <span class="metric-value" id="real-corruption">31%</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Source</span>
-        <span class="metric-value" style="font-size:0.7rem; color: var(--text-dim)">World Bank / BLS / CPI</span>
-      </div>
-      <div class="metric-row">
-        <span class="metric-label">Region</span>
-        <span class="metric-value" style="font-size:0.7rem; color: var(--text-dim)">United States 2025</span>
+      <div class="wallet-detail hidden" id="wallet-detail">
+        <div class="wallet-addr" id="wallet-addr">0x0000...0000</div>
+        <div class="wallet-bal"><span id="wallet-bal">0.00</span> MON</div>
+        <div class="wallet-won"><span id="wallet-won">0</span> $WON</div>
+        <a class="wallet-nadfun" id="wallet-nadfun" href="https://nad.fun/token/0x9d36A73462962d767509FC170c287634A0907777" target="_blank">Trade $WON on nad.fun</a>
       </div>
     </div>
-  </section>
 
-  <!-- PROVOCATIVE QUESTION -->
-  <section class="question-banner">
-    <div class="question-inner">
-      <h3 id="question-text">Same economic structure. Same roles. Same challenges. But the AI world is more prosperous. Why?</h3>
-      <p id="question-sub">Transparent governance. Fair redistribution. Zero corruption. Rational policy. All on-chain.</p>
-    </div>
-  </section>
+    <!-- Challenge Notifications -->
+    <div id="notif-stack" class="notif-stack"></div>
 
-  <!-- AGENTS -->
-  <section class="agents-section">
-    <h2>The Citizens</h2>
-    <div class="agents-grid" id="agents-grid">
-      <div class="agent-card" data-role="governor">
-        <div class="agent-icon">&#x1F3DB;</div>
-        <div class="agent-role">Governor</div>
-        <div class="agent-balance" id="bal-governor">-- MON</div>
-        <div class="agent-statement" id="stmt-governor">Awaiting first cycle...</div>
-      </div>
-      <div class="agent-card" data-role="merchant">
-        <div class="agent-icon">&#x1F4B0;</div>
-        <div class="agent-role">Merchant</div>
-        <div class="agent-balance" id="bal-merchant">-- MON</div>
-        <div class="agent-statement" id="stmt-merchant">Awaiting first cycle...</div>
-      </div>
-      <div class="agent-card" data-role="builder">
-        <div class="agent-icon">&#x1F3D7;</div>
-        <div class="agent-role">Builder</div>
-        <div class="agent-balance" id="bal-builder">-- MON</div>
-        <div class="agent-statement" id="stmt-builder">Awaiting first cycle...</div>
-      </div>
-      <div class="agent-card" data-role="banker">
-        <div class="agent-icon">&#x1F3E6;</div>
-        <div class="agent-role">Banker</div>
-        <div class="agent-balance" id="bal-banker">-- MON</div>
-        <div class="agent-statement" id="stmt-banker">Awaiting first cycle...</div>
-      </div>
-      <div class="agent-card" data-role="worker">
-        <div class="agent-icon">&#x1F528;</div>
-        <div class="agent-role">Worker</div>
-        <div class="agent-balance" id="bal-worker">-- MON</div>
-        <div class="agent-statement" id="stmt-worker">Awaiting first cycle...</div>
-      </div>
-      <div class="agent-card" data-role="philosopher">
-        <div class="agent-icon">&#x1F4DC;</div>
-        <div class="agent-role">Philosopher</div>
-        <div class="agent-balance" id="bal-philosopher">-- MON</div>
-        <div class="agent-statement" id="stmt-philosopher">Awaiting first cycle...</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CHART -->
-  <section class="chart-section">
-    <h2>Economy Over Time</h2>
-    <div class="chart-container">
-      <canvas id="economy-chart" height="250"></canvas>
-    </div>
-  </section>
-
-  <!-- LIVE FEED -->
-  <section class="feed-section">
-    <h2>Live Civilization Feed</h2>
-    <div class="feed-container" id="feed-container">
-      <div class="feed-entry philosopher">
-        <div class="feed-header">
-          <span class="feed-agent">GENESIS</span>
-          <span class="feed-time">now</span>
+    <!-- TX Confirmation Overlay -->
+    <div id="tx-overlay" class="tx-overlay hidden">
+      <div class="tx-panel">
+        <div class="tx-header">
+          <span class="tx-title">CONFIRM TRANSACTION</span>
+          <span class="tx-chain">MONAD</span>
         </div>
-        <div class="feed-action">Civilization initializing...</div>
-        <div class="feed-detail">Waiting for the first cycle to begin.</div>
+        <div class="tx-body">
+          <div class="tx-row"><span class="tx-lbl">Action</span><span class="tx-val" id="tx-action">Accept Challenge</span></div>
+          <div class="tx-row"><span class="tx-lbl">Amount</span><span class="tx-val tx-amount" id="tx-amount">0.0001 MONAD</span></div>
+          <div class="tx-row"><span class="tx-lbl">To</span><span class="tx-val" id="tx-to">Arena Contract</span></div>
+          <div class="tx-row"><span class="tx-lbl">Gas</span><span class="tx-val" id="tx-gas">~0.0000 MONAD</span></div>
+          <div class="tx-divider"></div>
+          <div class="tx-row tx-total-row"><span class="tx-lbl">Total</span><span class="tx-val tx-total" id="tx-total">0.0001 MONAD</span></div>
+        </div>
+        <div class="tx-actions">
+          <button class="tx-btn tx-reject" id="tx-reject">REJECT</button>
+          <button class="tx-btn tx-confirm" id="tx-confirm">CONFIRM</button>
+        </div>
+        <div class="tx-spinner hidden" id="tx-spinner">
+          <div class="tx-spin-ring"></div>
+          <span id="tx-spinner-text">Processing transaction...</span>
+        </div>
+        <div class="tx-hash hidden" id="tx-hash-row">
+          <span class="tx-lbl">TX</span>
+          <a class="tx-hash-link" id="tx-hash-link" href="#" target="_blank">View on Explorer</a>
+        </div>
       </div>
     </div>
-  </section>
 
-  <!-- WALLET CONNECT -->
-  <section class="wallet-section">
-    <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
-    <div class="wallet-info" id="wallet-info"></div>
-  </section>
+    <!-- Agent Profile Overlay -->
+    <div id="agent-profile-overlay" class="agent-profile-overlay hidden">
+      <div class="agent-profile-panel" id="agent-profile-panel"></div>
+    </div>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <p>GENESIS &mdash; The AI Civilization That Outperforms Reality</p>
-    <p>Built on <a href="https://monad.xyz" target="_blank">Monad</a> for <a href="https://moltiverse.dev" target="_blank">Moltiverse Hackathon 2026</a></p>
-    <p style="margin-top:8px">Every transaction is real. Every metric is calculated from on-chain data. <a href="https://explorer.monad.xyz" target="_blank">Verify on Explorer</a></p>
-  </footer>
+    <!-- AI Master HUD (top-center) -->
+    <div id="master-hud" class="master-hud">
+      <div class="master-mood" id="master-mood">NEUTRAL</div>
+      <div class="master-bar-wrap">
+        <div class="master-bar" id="master-bar" style="width:50%"></div>
+      </div>
+      <div class="master-announce" id="master-announce"></div>
+    </div>
 
-  <script src="app.js"></script>
+    <!-- AI Master Chat Overlay -->
+    <div id="master-chat" class="master-chat hidden">
+      <div class="mc-panel">
+        <div class="mc-header">
+          <span class="mc-eye"></span>
+          <span class="mc-name">AI MASTER</span>
+          <span class="mc-rel" id="mc-rel">STRANGER</span>
+        </div>
+        <div class="mc-message" id="mc-message">...</div>
+        <div class="mc-options" id="mc-options"></div>
+      </div>
+      <div class="mc-reaction hidden" id="mc-reaction"></div>
+    </div>
+
+    <!-- Floating message -->
+    <div id="msg" class="msg hidden"></div>
+
+    <!-- Attack Mission Offer Overlay -->
+    <div id="attack-offer" class="attack-offer hidden"></div>
+
+    <!-- H Key Test Panel (dev) -->
+    <div id="test-panel" class="test-panel hidden">
+      <div class="tp-header" id="tp-header">
+        <span class="tp-title">AI MASTER TEST</span>
+        <div class="tp-controls">
+          <button class="tp-min" onclick="toggleTestPanelMin()">_</button>
+          <button class="tp-close" onclick="toggleTestPanel()">X</button>
+        </div>
+      </div>
+      <div class="tp-body" id="tp-body">
+        <div class="tp-section">
+          <div class="tp-label">PLANES</div>
+          <div class="tp-row">
+            <button class="tp-btn" onclick="testAction('grant_plane_1')">Glider</button>
+            <button class="tp-btn" onclick="testAction('grant_plane_2')">Fighter</button>
+            <button class="tp-btn" onclick="testAction('grant_plane_3')">Dread</button>
+          </div>
+        </div>
+        <div class="tp-section">
+          <div class="tp-label">AVATARS</div>
+          <div class="tp-row">
+            <button class="tp-btn" onclick="testAction('grant_avatar_1')">Shadow</button>
+            <button class="tp-btn" onclick="testAction('grant_avatar_2')">Neon</button>
+            <button class="tp-btn" onclick="testAction('grant_avatar_3')">Void</button>
+          </div>
+        </div>
+        <div class="tp-section">
+          <div class="tp-label">HOME</div>
+          <div class="tp-row">
+            <button class="tp-btn" onclick="testAction('grant_home_2')">Tier 2</button>
+            <button class="tp-btn" onclick="testAction('grant_home_3')">Tier 3</button>
+          </div>
+        </div>
+        <div class="tp-section">
+          <div class="tp-label">ATTACKS</div>
+          <div class="tp-row">
+            <button class="tp-btn" onclick="testAction('grant_attack_emp')">EMP</button>
+            <button class="tp-btn" onclick="testAction('grant_attack_orbital')">Orbital</button>
+            <button class="tp-btn" onclick="testAction('grant_attack_swarm')">Swarm</button>
+          </div>
+        </div>
+        <div class="tp-section">
+          <div class="tp-label">MASTER MODE</div>
+          <div class="tp-row">
+            <button class="tp-btn tp-red" onclick="testAction('boss_mode')">BOSS</button>
+            <button class="tp-btn" onclick="testAction('normal_mode')">Normal</button>
+            <button class="tp-btn tp-blue" onclick="testAction('fly_mode')">FLY</button>
+          </div>
+        </div>
+        <div class="tp-section">
+          <div class="tp-label">MOOD</div>
+          <div class="tp-row">
+            <button class="tp-btn tp-green" onclick="testAction('mood_pleased')">Happy</button>
+            <button class="tp-btn" onclick="testAction('mood_neutral')">Neutral</button>
+            <button class="tp-btn tp-red" onclick="testAction('mood_furious')">Furious</button>
+          </div>
+        </div>
+        <div class="tp-section">
+          <div class="tp-label">ACTIONS</div>
+          <div class="tp-row">
+            <button class="tp-btn" onclick="testAction('trigger_chat')">Chat</button>
+            <button class="tp-btn" onclick="testAction('trigger_offer')">Offer</button>
+            <button class="tp-btn" onclick="testAction('win_reward')">Reward</button>
+          </div>
+          <div class="tp-row">
+            <button class="tp-btn" onclick="testAction('give_coins')">+Coins</button>
+            <button class="tp-btn" onclick="testAction('trigger_attack_mission')">Attack Mission</button>
+            <button class="tp-btn" onclick="testAction('trigger_betrayal')">Betrayal</button>
+            <button class="tp-btn tp-red" onclick="testAction('reset_assets')">Reset</button>
+          </div>
+        </div>
+        <div class="tp-log" id="tp-log"></div>
+      </div>
+    </div>
+
+    <!-- How to Play Panel (T to toggle) -->
+    <div id="manual-panel" class="manual-panel hidden">
+      <div class="np-grid-bg"></div>
+      <div class="np-scan"></div>
+      <div class="np-bracket np-tl"></div>
+      <div class="np-bracket np-tr"></div>
+      <div class="np-bracket np-bl"></div>
+      <div class="np-bracket np-br"></div>
+
+      <div class="np-header">
+        <div class="np-title" data-text="HOW TO PLAY">HOW TO PLAY</div>
+        <div class="np-sub">HIGBROKES</div>
+      </div>
+
+      <div class="manual-content">
+        <div class="manual-section active">
+          <div class="manual-row"><span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span><span class="key-desc">Move around</span></div>
+          <div class="manual-row"><span class="key-badge shift">SHIFT</span><span class="key-desc">Sprint</span></div>
+          <div class="manual-row"><span class="key-badge space">SPACE</span><span class="key-desc">Jump</span></div>
+          <div class="manual-row"><span class="key-badge cam">C</span><span class="key-desc">Cycle camera mode</span></div>
+          <div class="manual-row"><span class="key-badge lmb">LMB</span><span class="key-desc">Break block</span></div>
+          <div class="manual-row"><span class="key-badge rmb">RMB</span><span class="key-desc">Place block</span></div>
+          <div class="manual-row"><span class="key-badge num">1-9</span><span class="key-desc">Select block type</span></div>
+          <div class="manual-row"><span class="key-badge scroll">SCROLL</span><span class="key-desc">Cycle blocks</span></div>
+          <div class="manual-row"><span class="key-badge">+</span><span class="key-badge">-</span><span class="key-desc">Zoom in / out</span></div>
+          <div class="manual-tip">Collect orbs for MON. AI agents fight in the arena — watch live battles automatically.</div>
+        </div>
+      </div>
+
+      <div class="np-ticker">
+        <span class="np-tick-dot"></span>
+        <span id="np-ticker-text">SYS:ONLINE // AGENTS:5 // NET:ACTIVE</span>
+        <span class="np-tick-close"><span class="np-key">T</span> CLOSE</span>
+      </div>
+    </div>
+
+    <!-- Spectate HUD -->
+    <div id="spectate-hud" class="spectate-hud hidden">
+      <div class="spectate-badge">SPECTATING</div>
+      <div class="spectate-info" id="spectate-info">LANE RACE</div>
+      <div class="spectate-exit" onclick="stopSpectating()">ESC TO EXIT</div>
+    </div>
+
+    <!-- 3-2-1 Countdown Overlay -->
+    <div id="countdown-overlay" class="countdown-overlay hidden">
+      <div class="countdown-number" id="countdown-number">3</div>
+      <div class="countdown-label" id="countdown-label">LANE RACE</div>
+    </div>
+
+    <!-- Tekken-style HP Bars (beam battle only) -->
+    <div id="tekken-hud" class="tekken-hud hidden">
+      <div class="tekken-bar-wrap left">
+        <div class="tekken-name" id="tekken-p1-name">PLAYER 1</div>
+        <div class="tekken-bar">
+          <div class="tekken-hp" id="tekken-p1-hp"></div>
+        </div>
+      </div>
+      <div class="tekken-vs">VS</div>
+      <div class="tekken-bar-wrap right">
+        <div class="tekken-name" id="tekken-p2-name">PLAYER 2</div>
+        <div class="tekken-bar">
+          <div class="tekken-hp" id="tekken-p2-hp"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fight Result Overlay -->
+    <div id="fight-result" class="fight-result hidden">
+      <div class="fight-result-inner">
+        <div class="fight-result-text" id="fight-result-text">YOU WIN</div>
+        <div class="fight-result-sub" id="fight-result-sub"></div>
+        <button class="fight-result-btn" onclick="dismissFightResult()">CONTINUE</button>
+      </div>
+    </div>
+
+    <!-- Crosshair -->
+    <div id="crosshair" class="crosshair">+</div>
+
+    <!-- Hotbar -->
+    <div id="hotbar" class="hotbar"></div>
+    <div id="hotbar-name" class="hotbar-name"></div>
+
+    <!-- Dashboard Toggle Button (bottom-left) -->
+    <button id="dash-btn" class="dash-btn" onclick="toggleDashboard()">
+      <span class="dash-btn-icon">&#9638;</span> DASHBOARD
+    </button>
+
+    <!-- Dashboard Panel (center, like T panel) -->
+    <div id="dashboard" class="dashboard hidden">
+      <div class="np-grid-bg"></div>
+      <div class="np-scan"></div>
+      <div class="np-bracket np-tl"></div>
+      <div class="np-bracket np-tr"></div>
+      <div class="np-bracket np-bl"></div>
+      <div class="np-bracket np-br"></div>
+
+      <div class="np-header">
+        <div class="np-title" data-text="DASHBOARD">DASHBOARD</div>
+        <div class="np-sub">HIGBROKES</div>
+      </div>
+
+      <div class="dash-tabs">
+        <button class="dash-tab active" data-tab="world" onclick="switchDashTab('world')">WORLD</button>
+        <button class="dash-tab" data-tab="agents" onclick="switchDashTab('agents')">AGENTS</button>
+        <button class="dash-tab" data-tab="fights" onclick="switchDashTab('fights')">FIGHTS</button>
+        <button class="dash-tab" data-tab="assets" onclick="switchDashTab('assets')">ASSETS</button>
+        <button class="dash-tab" data-tab="puzzle" onclick="switchDashTab('puzzle')">PUZZLE</button>
+      </div>
+
+      <div class="dash-body">
+        <!-- WORLD TAB -->
+        <div class="dash-section active" id="dash-world">
+          <div class="dash-stat-grid">
+            <div class="dash-stat">
+              <span class="dash-stat-label">MON BALANCE</span>
+              <span class="dash-stat-val" id="dash-mon">0.00</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-label">$WON BALANCE</span>
+              <span class="dash-stat-val won" id="dash-won">0</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-label">WINS</span>
+              <span class="dash-stat-val win" id="dash-wins">0</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-label">LOSSES</span>
+              <span class="dash-stat-val loss" id="dash-losses">0</span>
+            </div>
+          </div>
+          <div class="dash-divider"></div>
+          <div class="dash-stat-row">
+            <span class="dash-stat-label">WIN RATE</span>
+            <span class="dash-stat-val" id="dash-winrate">--</span>
+          </div>
+          <div class="dash-stat-row">
+            <span class="dash-stat-label">TOTAL EARNINGS</span>
+            <span class="dash-stat-val" id="dash-earnings">0.000 MON</span>
+          </div>
+          <div class="dash-divider"></div>
+          <div class="dash-request-section">
+            <div class="dash-request-label">REQUEST TO AI MASTER</div>
+            <div class="dash-request-hint">He's not your puppet. You're HIS puppet. He'll come when he wants.</div>
+            <div class="dash-request-row">
+              <input type="text" id="dash-request-input" class="dash-request-input" placeholder="Ask the AI Master something..." maxlength="200">
+              <button class="dash-request-btn" onclick="sendMasterRequest()">SEND</button>
+            </div>
+            <div class="dash-request-status" id="dash-request-status"></div>
+          </div>
+        </div>
+        <!-- AGENTS TAB -->
+        <div class="dash-section" id="dash-agents">
+          <div class="dash-agent-list" id="dash-agent-list"></div>
+        </div>
+        <!-- FIGHTS TAB -->
+        <div class="dash-section" id="dash-fights">
+          <div class="dash-fight-list" id="dash-fight-list"></div>
+        </div>
+        <!-- ASSETS TAB -->
+        <div class="dash-section" id="dash-assets">
+          <div id="assets-container" class="assets-container"></div>
+        </div>
+        <!-- PUZZLE TAB -->
+        <div class="dash-section" id="dash-puzzle">
+          <div id="puzzle-container"></div>
+        </div>
+      </div>
+
+      <div class="np-ticker">
+        <span class="np-tick-dot"></span>
+        <span id="dash-ticker-text">NETWORK:MONAD // AGENTS:5 // STATUS:ONLINE</span>
+        <span class="np-tick-close"><span class="np-key">ESC</span> CLOSE</span>
+      </div>
+    </div>
+
+    <!-- Controls hint -->
+    <div id="controls-hint" class="hint">
+      <span>T</span> CONTROLS
+    </div>
+  </div>
+
+  <script type="module" src="scene.js"></script>
 </body>
 </html>

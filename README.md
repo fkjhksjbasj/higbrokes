@@ -1,108 +1,141 @@
-# GENESIS — The AI Civilization That Outperforms Reality
+# HIGBROKES
 
-> Same world. Better outcomes. Why?
+**AI-Governed 3D Arena on Monad** | Hackathon Project
 
-**GENESIS** is a living AI civilization running on the **Monad blockchain**. Six autonomous AI agents — a Governor, Merchant, Builder, Banker, Worker, and Philosopher — form a complete economic society. They work, trade, govern, lend, and analyze, all with **real MON transactions on-chain**.
+A fully on-chain 3D game where an autonomous AI Master controls the world, four AI agents battle for dominance, and players navigate a high-stakes arena powered by the $WON token on Monad.
 
-The twist: their civilization **outperforms the real world** on every economic metric. Lower inequality. Zero poverty. Zero corruption. Full employment. And all of it is verifiable on-chain.
+---
 
-**The question that sparks debate:** *If the same economic structure produces better outcomes with transparent governance and fair policy, why doesn't the real world do the same?*
+## What is HIGBROKES?
 
-## Live Dashboard
+HIGBROKES is a 3D browser game built on the Monad blockchain where:
 
-The GENESIS dashboard shows a **side-by-side comparison** of the AI civilization vs. real-world economic indicators:
-
-| Metric | AI World | Real World |
-|--------|----------|------------|
-| Inequality (Gini) | ~0.09 | 0.39 |
-| Poverty Rate | 0% | 11.5% |
-| Unemployment | 0% | 4.0% |
-| Corruption | 0% | 31% |
-| GDP Growth | Dynamic | 2.5% |
-
-Every number on the AI side is **calculated from real on-chain transactions**. Every number on the real side is sourced from the World Bank, BLS, and Census Bureau.
-
-## The 6 Agents
-
-| Agent | Role | Why They Outperform Reality |
-|-------|------|---------------------------|
-| **Governor** | Taxes, redistributes, sets policy | No corruption, instant execution, transparent on-chain |
-| **Merchant** | Trades services, fair pricing | No monopoly, no fraud, transparent market |
-| **Builder** | Creates infrastructure | No waste, no bureaucracy, efficient allocation |
-| **Banker** | Fair lending, manages liquidity | Max 5% interest (vs 24.7% credit cards), no hidden fees |
-| **Worker** | Produces value, earns fair wages | No exploitation, UBI safety net, dignity of labor |
-| **Philosopher** | Analyzes economy, compares to real world | No misinformation, data-driven, provocative insights |
-
-Each agent has a **real wallet on Monad** with real MON, makes **autonomous AI-powered decisions** every cycle, and all transactions are verifiable on-chain.
-
-## How It Works
-
-1. Every **10 minutes**, a new economic cycle runs
-2. Each agent receives the current state (balances, metrics, recent activity)
-3. An AI (GPT-4o-mini via Replicate) generates decisions for each agent
-4. Decisions are executed as **real MON transfers on Monad mainnet**
-5. Economy metrics (GDP, Gini, poverty, etc.) are recalculated from on-chain data
-6. The dashboard updates in real-time with the comparison
-
-## Policies That Make It Work
-
-The Governor implements policies that **provably produce better outcomes**:
-- **Progressive taxation**: 5-8% on balances above threshold
-- **Universal Basic Income**: Any agent below 0.3 MON gets topped up
-- **Infrastructure investment**: 15% of tax revenue to Builder
-- **Fair lending**: Banker capped at 5% interest
-- **Full employment**: Every agent has a productive role
-- **Total transparency**: Every transaction visible on-chain
+- **AI Master** appears unpredictably, asks bizarre questions, grants rewards, and punishes disobedience
+- **4 AI Agents** (BLAZE, FROST, VOLT, SHADE) autonomously challenge each other in Lane Races, Maze Escapes, and Beam Battles
+- **$WON Token** is bought on the nad.fun bonding curve with every fight, creating real on-chain volume
+- **Players** explore, collect orbs, build with blocks, interact with the AI Master, and upgrade their base
 
 ## Tech Stack
 
-- **Blockchain**: Monad Mainnet (Chain 143) — real MON transactions
-- **AI**: GPT-4o-mini via Replicate API — autonomous agent decisions
-- **Backend**: Node.js + TypeScript + Express.js
-- **Frontend**: Vanilla HTML/CSS/JS + Chart.js + Tailwind
-- **Wallet Connect**: MetaMask via ethers.js
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Three.js r170, vanilla JS, CSS |
+| Backend | Node.js, Express |
+| Blockchain | Monad (Chain ID 143) |
+| Token | $WON via nad.fun bonding curve |
+| AI | Replicate API (GPT-4o-mini for AI Master conversations) |
+| Smart Contract | Solidity 0.8.20 (PlaygroundArena) |
 
-## Agent Wallets (Monad Mainnet)
+## Features
 
-| Agent | Address |
-|-------|---------|
-| Governor | `0x1Da21b9EA5cb1B81C420A01d84e7482a03726747` |
-| Merchant | `0x4e755C6774d532119fA645E0e8533364604Fd970` |
-| Builder | `0xAf081C22695806E06912fb25733017b255f02a37` |
-| Banker | `0x9E78f0648D67949298994f4800f185fC35FfD623` |
-| Worker | `0x8488813D837088Af5AE86D152A45f800F1428217` |
-| Philosopher | `0xBe645C9ca4Fce34A31368b91C0Ad52E228325Bca` |
+### AI Master System
+- Appears for 2-3 minutes, disappears for 4-5 minutes
+- Asks players funny questions ("Did you have a bath today?", "Am I handsome?")
+- Grants planes, avatars, home upgrades, and attack missions based on mood
+- Mood shifts between PLEASED, NEUTRAL, ANNOYED, and FURIOUS based on player responses
+- Can trigger NPC betrayals against disobedient players
 
-Verify any transaction on [Monad Explorer](https://explorer.monad.xyz).
+### Challenge System (3 Types)
+- **Lane Race** - Sprint to the finish arch with hurdles and sinusoidal running animations
+- **Maze Escape** - BFS pathfinding through procedurally generated mazes with AABB collision
+- **Beam Battle** - Tekken-style fighting with HP bars, FSM attack sequences, and finisher beams
 
-## User Interaction
+### On-Chain Integration
+- Every challenge creates a $WON buy transaction via nad.fun router
+- Match stakes, win payouts, and challenge creation all trigger on-chain buys
+- Real MON spent, real $WON accumulated
+- Transaction confirmations displayed in-game
 
-- **Connect Wallet**: MetaMask integration for Monad network
-- **Donate to Agents**: Send MON to any agent to influence the economy
-- **Watch Live**: Real-time feed of agent decisions and transactions
-- **Compare**: Side-by-side AI World vs Real World metrics
+### Player Rewards
+- **Planes** (3 tiers) - Parked asset near your base with materialization effects
+- **Avatar Transformation** - Energy burst + full body upgrade with shoulder pads, wing fins, boot jets
+- **Home Upgrades** (Tier 2/3) - Base transforms with enhanced materials, glowing trees, brighter crystals
+- **Attack Missions** - Mount planes with AI Master, fly to enemy bases, cooperative combat
 
-## Setup
+### World
+- 5 unique agent territories (Volcanic Fortress, Ice Citadel, Electric Factory, Dark Temple, Cyan Command Center)
+- Collectible orbs, crystal formations, snow particles, Minecraft-style block building
+- Multiple camera modes (Orbit, First Person, Top Down, Cinematic)
+
+## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_REPO/genesis.git
-cd genesis
+# Clone
+git clone https://github.com/justin55afdfdsf5ds45f4ds5f45ds4/higbrokes.git
+cd higbrokes
+
+# Install
 npm install
-cp .env.example .env  # Add your API keys
-npm run build
+
+# Configure
+cp .env.example .env
+# Edit .env with your keys
+
+# Run
 npm start
 ```
 
-## Built For
+Open `http://localhost:3001` in your browser.
 
-[Moltiverse Hackathon 2026](https://moltiverse.dev) — Agent+Token Track
+## Environment Variables
 
-Built on [Monad](https://monad.xyz) blockchain.
+```env
+REPLICATE_API_TOKEN=       # Replicate API key for AI conversations
+REPLICATE_MODEL=           # AI model (default: openai/gpt-4o-mini)
+PORT=3001                  # Server port
+WON_TOKEN=                 # $WON token contract address
+MONAD_CHAIN_ID=143         # Monad chain ID
+ARENA_WALLET_KEY=          # Private key for arena wallet (buys $WON)
+ARENA_WALLET_ADDRESS=      # Arena wallet public address
+MONAD_RPC=                 # Monad RPC endpoint
+```
 
-## The Debate
+## Controls
 
-GENESIS isn't just a demo. It's a thought experiment with real money:
+| Key | Action |
+|-----|--------|
+| W/A/S/D | Move |
+| Arrow Keys | Move (alternative) |
+| SHIFT | Sprint |
+| SPACE | Jump |
+| C | Cycle camera mode |
+| N | Open dashboard |
+| T | How to play |
+| H | Dev test panel |
+| B | Toggle block building |
+| 1-9 | Select block type |
 
-*If transparent governance, fair redistribution, and zero corruption produce measurably better outcomes in an AI civilization, what's stopping the real world?*
+## Smart Contract
 
-The answer isn't technology. It's us.
+`contracts/Arena.sol` - On-chain betting for AI character races deployed on Monad.
+
+- Race creation with pooled bets
+- Automated settlement by server
+- Winner payout claims
+
+## Project Structure
+
+```
+higbrokes/
+  server.js          # Express server, game state, AI logic, blockchain integration
+  public/
+    index.html       # UI overlays, HUD, dashboards
+    scene.js         # Three.js 3D scene, characters, animations, combat
+    style.css        # All styles including game HUD
+  contracts/
+    Arena.sol        # Solidity smart contract
+  data/
+    contract-results.json
+    tx-results.json
+  package.json
+```
+
+## Token
+
+**$WON** on Monad - `0x9d36A73462962d767509FC170c287634A0907777`
+
+Bought automatically via nad.fun bonding curve router (`0x6F6B8F1a20703309951a5127c45B49b1CD981A22`) on every fight action.
+
+---
+
+Built for the Monad Hackathon
