@@ -283,8 +283,9 @@ JUDGE_PASSWORD=            # Admin password for test panel
 | W/A/S/D | Move |
 | SHIFT | Sprint |
 | SPACE | Jump |
-| V | Cycle camera mode |
-| N | Open dashboard |
+| C | Cycle camera mode |
+| T | Open controls panel |
+| H | Open AI Master panel |
 | Right Click | Place block |
 | Middle/Left Click | Remove block |
 | 1-9 | Select block type |
