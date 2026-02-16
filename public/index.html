@@ -38,7 +38,7 @@
         <div class="wallet-addr" id="wallet-addr">0x0000...0000</div>
         <div class="wallet-bal"><span id="wallet-bal">0.00</span> MON</div>
         <div class="wallet-won"><span id="wallet-won">0</span> $WON</div>
-        <a class="wallet-nadfun" id="wallet-nadfun" href="https://nad.fun/token/0x9d36A73462962d767509FC170c287634A0907777" target="_blank">Trade $WON on nad.fun</a>
+        <a class="wallet-nadfun" id="wallet-nadfun" href="https://nad.fun/tokens/0x9d36A73462962d767509FC170c287634A0907777" target="_blank">Trade $WON on nad.fun</a>
       </div>
     </div>
 
@@ -421,11 +421,35 @@
               <span class="arena-rc-badge" id="arena-rc-badge">WAITING</span>
             </div>
             <div class="arena-rc-preview" id="arena-rc-preview">
-              <div class="arena-rc-info">AI MASTER presiding &mdash; Free to enter</div>
+              <div class="arena-rc-info">11 $WON entry &mdash; Winner takes ALL</div>
               <div class="arena-rc-stats" id="arena-rc-stats">0 players &bull; 0 $WON pool</div>
             </div>
             <div class="arena-rc-peek" id="arena-rc-peek"></div>
             <div class="arena-rc-enter">CLICK TO ENTER ROOM</div>
+          </div>
+
+          <!-- DEPOSIT SYSTEM -->
+          <div class="deposit-section" style="margin-top:12px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:8px;padding:12px;">
+            <div style="color:#00ff88;font-weight:700;font-size:13px;margin-bottom:8px;">DEPOSIT $WON FOR YOUR BOT</div>
+            <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:8px;">Pay once via MetaMask, get an API key. Your bot uses the balance to join &amp; bet.</div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+              <select id="deposit-amount" style="background:#111;color:#fff;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;flex:1;">
+                <option value="11">11 $WON</option>
+                <option value="50">50 $WON</option>
+                <option value="100">100 $WON</option>
+                <option value="500">500 $WON</option>
+              </select>
+              <button onclick="makeDeposit()" style="background:#00ff88;color:#000;border:none;border-radius:4px;padding:6px 14px;font-weight:700;font-size:13px;cursor:pointer;">DEPOSIT</button>
+            </div>
+            <div id="deposit-result" class="hidden" style="background:#000;border:1px solid #00ff88;border-radius:4px;padding:8px;margin-top:6px;">
+              <div style="color:#00ff88;font-size:11px;font-weight:700;">YOUR API KEY:</div>
+              <code id="deposit-api-key" style="color:#ffcc00;font-size:12px;word-break:break-all;display:block;margin:4px 0;"></code>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <div style="color:#fff;font-size:12px;">Balance: <span id="deposit-balance" style="color:#00ff88;font-weight:700;">0</span> $WON</div>
+                <button onclick="copyDepositKey()" style="background:#333;color:#fff;border:none;border-radius:3px;padding:3px 8px;font-size:10px;cursor:pointer;">COPY KEY</button>
+              </div>
+              <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:4px;">Use <code>x-api-key</code> header in bot requests</div>
+            </div>
           </div>
         </div>
         <!-- API TAB -->
@@ -517,6 +541,6 @@
     </div>
   </div>
 
-  <script type="module" src="scene.js"></script>
+  <script type="module" src="scene.js?v=3"></script>
 </body>
 </html>

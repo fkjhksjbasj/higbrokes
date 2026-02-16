@@ -2045,9 +2045,9 @@ body {
 
 /* ===== TX OVERLAY ===== */
 .tx-overlay {
-  position: absolute;
+  position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 60;
+  z-index: 99999;
   background: rgba(0,0,0,0.7);
   backdrop-filter: blur(6px);
   display: flex;
@@ -2750,6 +2750,13 @@ body {
 .activity-item .act-action.challenge_create { color: var(--orange); }
 .activity-item .act-action.challenge_accept { color: var(--cyan); }
 .activity-item .act-action.agent_register { color: #44ff88; }
+.activity-item .act-action.arena_entry { color: #00ff88; }
+.activity-item .act-action.arena_win { color: #ffcc00; font-weight: 800; }
+.activity-item .act-action.deposit { color: #00ffcc; }
+.activity-item .act-action.room_bet { color: #ff88ff; }
+.activity-item .act-action.puzzle_solve { color: #88ff44; }
+.activity-item .act-action.master_hustle { color: #ff6644; }
+.activity-item .act-action.challenge_win { color: var(--gold); }
 
 .activity-item .act-detail-mini {
   color: rgba(255,255,255,0.4);
@@ -4802,3 +4809,9 @@ body {
 .dash-act-type.puzzle_solve { color: #00ff88; }
 .dash-act-type.agent_register { color: #cc44ff; }
 .dash-act-type.agent_leave { color: #ff4444; }
+.dash-act-type.arena_entry { color: #00ff88; font-weight: 800; }
+.dash-act-type.arena_win { color: #ffcc00; font-weight: 800; }
+.dash-act-type.deposit { color: #00ffcc; font-weight: 800; }
+.dash-act-type.master_hustle { color: #ff6644; }
+.dash-act-type.master_autonomous_gift { color: #ffcc00; }
+.dash-act-type.master_threat_executed { color: #ff4444; }

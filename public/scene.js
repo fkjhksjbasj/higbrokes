@@ -2815,6 +2815,23 @@ const collectParticles = [];
 let walletConnected = false;
 let walletAddress = '';
 
+// Get player display name from localStorage / input / fallback
+function getPlayerName() {
+  // 1. Check dash name input
+  const input = document.getElementById('dash-name-input');
+  if (input && input.value.trim()) return input.value.trim();
+  // 2. Check localStorage by wallet
+  if (walletAddress) {
+    const saved = localStorage.getItem('playerName_' + walletAddress);
+    if (saved) return saved;
+  }
+  // 3. Check any saved name
+  const anyName = localStorage.getItem('higbrokes_playerName');
+  if (anyName) return anyName;
+  // 4. Fallback
+  return 'PLAYER';
+}
+
 // Spectate state
 let spectatingChallenge = null;
 let spectateReturnPos = null;
@@ -5758,8 +5775,19 @@ document.getElementById('tx-confirm')?.addEventListener('click', async () => {
   document.getElementById('tx-spinner-text').textContent = 'Processing transaction...';
 
   // If wallet connected, buy $WON on nad.fun via player's MetaMask
-  if (walletConnected && ethSigner) {
+  if (walletConnected || window.ethereum) {
     try {
+      // Ensure we have a signer — reconnect if needed
+      if (!ethSigner && window.ethereum) {
+        ethProvider = new window.ethers.BrowserProvider(window.ethereum);
+        ethSigner = await ethProvider.getSigner();
+        if (!walletAddress) {
+          walletAddress = await ethSigner.getAddress();
+          walletConnected = true;
+        }
+      }
+      if (!ethSigner) throw new Error('No wallet signer available');
+
       document.getElementById('tx-spinner-text').textContent = 'Confirm in MetaMask...';
 
       // Create nad.fun router contract with player's signer
@@ -5796,10 +5824,12 @@ document.getElementById('tx-confirm')?.addEventListener('click', async () => {
       updateWalletBalance();
 
       // Auto-close after showing hash for 1.5s, then run callback
-      setTimeout(() => {
+      setTimeout(async () => {
         document.getElementById('tx-overlay')?.classList.add('hidden');
         hashRow?.classList.add('hidden');
-        if (onConfirm) onConfirm(receipt.hash);
+        if (onConfirm) {
+          try { await onConfirm(receipt.hash); } catch (cbErr) { console.error('onConfirm callback error:', cbErr); }
+        }
         pendingTx = null;
       }, 1500);
 
@@ -5813,7 +5843,13 @@ document.getElementById('tx-confirm')?.addEventListener('click', async () => {
         if (pendingTx?.onReject) pendingTx.onReject();
         pendingTx = null;
       } else {
-        showMsg('$WON buy failed: ' + (err.reason || err.message || 'unknown'));
+        var errMsg = err.reason || err.message || 'unknown error';
+        console.error('TX ERROR DETAILS:', errMsg);
+        // Use alert so user can actually read the error
+        alert('Transaction failed:\n\n' + errMsg + '\n\nCheck you have enough MON for gas.');
+        document.getElementById('tx-overlay')?.classList.add('hidden');
+        if (pendingTx?.onReject) pendingTx.onReject();
+        pendingTx = null;
       }
     }
   } else {
@@ -6152,6 +6188,12 @@ async function fetchActivity() {
                     e.type === 'ROOM_POOL' ? 'POOL' :
                     e.type === 'PUZZLE_SOLVE' ? 'SOLVE' :
                     e.type === 'AGENT_REGISTER' ? 'AGENT' :
+                    e.type === 'ARENA_ENTRY' ? 'ENTRY' :
+                    e.type === 'ARENA_WIN' ? 'WIN' :
+                    e.type === 'DEPOSIT' ? 'DEPOSIT' :
+                    e.type === 'MASTER_HUSTLE' ? 'HUSTLE' :
+                    e.type === 'MASTER_AUTONOMOUS_GIFT' ? 'GIFT' :
+                    e.type === 'MASTER_THREAT_EXECUTED' ? 'THREAT' :
                     (e.action || e.type);
 
       div.innerHTML = `
@@ -6243,7 +6285,7 @@ async function sendGlobalEmoji(emoji) {
     const r = await fetch('/api/emoji/broadcast', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emoji, from: state?.playerProfile?.displayName || 'YOU' })
+      body: JSON.stringify({ emoji, from: getPlayerName() || 'YOU' })
     });
     const data = await r.json();
     // Thomas responds with emoji
@@ -6282,7 +6324,7 @@ async function pollArenaEmojis() {
         if (e.t <= lastEmojiTime) continue;
         lastEmojiTime = e.t;
         // Show emojis from OTHER players near arena center
-        if (e.from !== (state?.playerProfile?.displayName || 'YOU')) {
+        if (e.from !== (getPlayerName() || 'YOU')) {
           const rx = ARENA_ROOM_POS.x + (Math.random() - 0.5) * 8;
           const rz = ARENA_ROOM_POS.z + (Math.random() - 0.5) * 8;
           spawnEmojiSprite({ x: rx, y: 1, z: rz }, e.emoji);
@@ -6294,12 +6336,11 @@ async function pollArenaEmojis() {
 setInterval(pollArenaEmojis, 4000);
 
 // ============================================================
-// MULTIPLAYER — See other players in real-time
+// MULTIPLAYER — Position reporting for arena room
 // ============================================================
-const otherPlayers = {}; // id → { group, nameSprite, lastSeen }
 const myPlayerId = 'p_' + Math.random().toString(36).slice(2, 10);
 
-// Report my position every 1.5s
+// Report my position every 1.5s (used by arena room participant system)
 setInterval(async () => {
   try {
     await fetch('/api/player/position', {
@@ -6316,85 +6357,8 @@ setInterval(async () => {
   } catch (e) { /* silent */ }
 }, 1500);
 
-// Create a simple character mesh for another player
-function createOtherPlayer(id, data) {
-  const color = data.color || 0x00ffcc;
-  const ch = createCharacter({ bodyColor: color, glowColor: color, name: data.name });
-  ch.group.position.set(data.x, data.y + 1, data.z);
-
-  // Name label above head
-  const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 48;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(0, 0, 256, 48);
-  ctx.fillStyle = '#00ffcc';
-  ctx.font = 'bold 22px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(data.name || 'PLAYER', 128, 32);
-  const tex = new THREE.CanvasTexture(canvas);
-  const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-  const nameSprite = new THREE.Sprite(spriteMat);
-  nameSprite.scale.set(4, 0.75, 1);
-  nameSprite.position.set(0, 3.5, 0);
-  ch.group.add(nameSprite);
-
-  otherPlayers[id] = { char: ch, nameSprite, lastSeen: Date.now(), targetX: data.x, targetY: data.y, targetZ: data.z };
-  return ch;
-}
-
-// Poll other players every 1.5s
-async function pollOtherPlayers() {
-  try {
-    const excludeWallet = walletAddress ? `&excludeWallet=${encodeURIComponent(walletAddress)}` : '';
-    const r = await fetch(`/api/player/positions?exclude=${encodeURIComponent(myPlayerId)}${excludeWallet}`);
-    const data = await r.json();
-    const seen = new Set();
-
-    for (const p of data.players) {
-      seen.add(p.id);
-      if (otherPlayers[p.id]) {
-        // Update position target (smooth interpolation in animate loop)
-        otherPlayers[p.id].targetX = p.x;
-        otherPlayers[p.id].targetY = p.y;
-        otherPlayers[p.id].targetZ = p.z;
-        otherPlayers[p.id].lastSeen = Date.now();
-      } else {
-        // New player — create character
-        createOtherPlayer(p.id, p);
-      }
-    }
-
-    // Remove players who disconnected
-    for (const id of Object.keys(otherPlayers)) {
-      if (!seen.has(id)) {
-        otherPlayers[id].char.group.removeFromParent();
-        delete otherPlayers[id];
-      }
-    }
-  } catch (e) { /* silent */ }
-}
-setInterval(pollOtherPlayers, 1500);
-
-// Smoothly move other players toward their target positions (called in animate)
-function updateOtherPlayers(dt) {
-  const lerp = Math.min(1, dt * 5);
-  for (const [id, op] of Object.entries(otherPlayers)) {
-    const g = op.char.group;
-    g.position.x += (op.targetX - g.position.x) * lerp;
-    g.position.y += ((op.targetY + 1) - g.position.y) * lerp;
-    g.position.z += (op.targetZ - g.position.z) * lerp;
-    // Simple walking animation
-    const t = performance.now() / 1000;
-    const moving = Math.abs(op.targetX - g.position.x) > 0.1 || Math.abs(op.targetZ - g.position.z) > 0.1;
-    if (moving && op.char.parts) {
-      op.char.parts.lLeg.rotation.x = Math.sin(t * 8) * 0.6;
-      op.char.parts.rLeg.rotation.x = Math.sin(t * 8 + Math.PI) * 0.6;
-      op.char.parts.lArm.rotation.x = Math.sin(t * 8 + Math.PI) * 0.3;
-      op.char.parts.rArm.rotation.x = Math.sin(t * 8) * 0.3;
-    }
-  }
-}
+// Other players are shown via arena room's spawnArenaParticipant system only
+function updateOtherPlayers(dt) { /* no-op — multiplayer rendering is arena-only */ }
 
 // Poll for new API agents periodically and spawn their 3D homes
 async function pollForAPIAgents() {
@@ -6506,7 +6470,7 @@ async function refreshDashboard() {
           // Service data — works for both built-in NPCs and API agents
           const svc = (name !== 'YOU' && ag.service) ? {
             name: ag.service, icon: ag.isAPIAgent ? '🤖' : { BLAZE: '🔥', FROST: '❄️', VOLT: '⚡', SHADE: '👻' }[name] || '☕',
-            cost: (ag.serviceCost || 1) + ' $WON', desc: ag.serviceDesc || 'Special brew',
+            cost: (ag.serviceCost || 400) + ' $WON', desc: ag.serviceDesc || 'Special brew',
           } : null;
           const visitSection = name !== 'YOU' ? `
             <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
@@ -6717,6 +6681,12 @@ async function refreshActivityTab() {
                     e.type === 'ROOM_POOL' ? 'POOL' :
                     e.type === 'PUZZLE_SOLVE' ? 'SOLVE' :
                     e.type === 'AGENT_REGISTER' ? 'AGENT' :
+                    e.type === 'ARENA_ENTRY' ? 'ENTRY' :
+                    e.type === 'ARENA_WIN' ? 'WIN' :
+                    e.type === 'DEPOSIT' ? 'DEPOSIT' :
+                    e.type === 'MASTER_HUSTLE' ? 'HUSTLE' :
+                    e.type === 'MASTER_AUTONOMOUS_GIFT' ? 'GIFT' :
+                    e.type === 'MASTER_THREAT_EXECUTED' ? 'THREAT' :
                     (e.action || e.type || '?');
       const hashLink = e.hash
         ? `<a class="dash-act-hash" href="https://monadscan.com/tx/${e.hash}" target="_blank">${e.hash.slice(0,8)}...</a>`
@@ -8311,12 +8281,8 @@ function visitNPC(name) {
 window.visitNPC = visitNPC;
 
 async function buyNPCService(name) {
-  // Buy tea/service directly from dashboard — visits + starts tea automatically
-  visitNPC(name);
-  // Wait for teleport to finish, then auto-start tea
-  setTimeout(() => {
-    startTeaSession(name);
-  }, VISIT_TELEPORT_DURATION + 500);
+  // Show tx popup first (right where the player is), teleport only after payment
+  startTeaSession(name);
 }
 window.buyNPCService = buyNPCService;
 
@@ -8632,64 +8598,85 @@ window.sendNPCEmoji = sendNPCEmoji;
 async function startTeaSession(name) {
   if (teaSession) return;
 
-  // Direct server purchase — arena wallet buys $WON, no MetaMask popup
-  try {
-    showFloatingMsg('Buying tea...');
-    const r = await fetch(`/api/npc/${name}/tea/buy`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet: walletAddress || '' })
-    });
-    const data = await r.json();
-    if (!data.ok) {
-      openNPCChat(name, 'Something went wrong...', [
-        { type: 'neutral', label: 'Try again' },
-        { type: 'neutral', label: 'Nevermind' }
-      ], 'stranger');
-      return;
-    }
-
-    showFloatingMsg(`${data.service || 'TEA'} bought! ${data.txHash ? 'TX: ' + data.txHash.slice(0,8) + '...' : ''}`);
-
-    // Start tea session
-    const npc = homeNPCs[name];
-    if (!npc) return;
-
-    teaSession = {
-      name,
-      startTime: performance.now(),
-      duration: 30000, // 30 seconds
-      sipTimer: 0,
-      sipping: false,
-      sipPhase: 0,
-    };
-
-    // Create cup meshes
-    const cupGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.1, 8);
-    const cupMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-
-    const playerCup = new THREE.Mesh(cupGeo, cupMat);
-    playerCup.position.set(player.x + 0.3, player.y + 1.0, player.z);
-    scene.add(playerCup);
-
-    const npcCup = new THREE.Mesh(cupGeo.clone(), cupMat.clone());
-    npcCup.position.set(npc.x + 0.3, npc.y + 1.0, npc.z);
-    scene.add(npcCup);
-
-    teaCups.push(playerCup, npcCup);
-
-    // Open chat during tea
-    openNPCChat(name, 'Cheers! *sips tea* This is nice...', [
-      { type: 'positive', label: 'This is great!' },
-      { type: 'neutral', label: '*sips tea*' },
-      { type: 'positive', label: 'We should do this more' }
-    ], 'improving');
-
-    showNPCReaction(`Tea time with ${name}!`, 'happy');
-
-  } catch (e) {
-    console.error('Tea session error:', e);
+  // Connect wallet if not connected — await MetaMask popup
+  if (!walletConnected && !window.ethereum) {
+    showMsg('Install MetaMask to buy tea!');
+    return;
   }
+  if (!walletConnected) {
+    await connectWallet();
+    if (!walletConnected) return;
+  }
+
+  // Close dashboard so tx overlay is clearly visible
+  const dashEl = document.getElementById('dashboard');
+  if (dashEl && !dashEl.classList.contains('hidden')) toggleDashboard();
+
+  const TEA_COST_MON = 0.01;
+
+  showTxOverlay({
+    action: `Buy Tea with ${name} (400 $WON)`,
+    amount: TEA_COST_MON,
+    to: `nad.fun → $WON (${name} Tea)`,
+    onConfirm: async (txHash) => {
+      try {
+        const r = await fetch(`/api/npc/${name}/tea/buy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallet: walletAddress || '', txHash })
+        });
+        const data = await r.json();
+        if (!data.ok) {
+          showMsg('Tea purchase failed');
+          return;
+        }
+
+        showMsg(`${data.service || 'TEA'} bought!`);
+
+        // Payment done — teleport to NPC, then start tea session
+        visitNPC(name);
+        setTimeout(() => {
+          const npc = homeNPCs[name];
+          if (!npc) return;
+
+          teaSession = {
+            name,
+            startTime: performance.now(),
+            duration: 30000,
+            sipTimer: 0,
+            sipping: false,
+            sipPhase: 0,
+          };
+
+          const cupGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.1, 8);
+          const cupMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+
+          const playerCup = new THREE.Mesh(cupGeo, cupMat);
+          playerCup.position.set(player.x + 0.3, player.y + 1.0, player.z);
+          scene.add(playerCup);
+
+          const npcCup = new THREE.Mesh(cupGeo.clone(), cupMat.clone());
+          npcCup.position.set(npc.x + 0.3, npc.y + 1.0, npc.z);
+          scene.add(npcCup);
+
+          teaCups.push(playerCup, npcCup);
+
+          openNPCChat(name, 'Cheers! *sips tea* This is nice...', [
+            { type: 'positive', label: 'This is great!' },
+            { type: 'neutral', label: '*sips tea*' },
+            { type: 'positive', label: 'We should do this more' }
+          ], 'improving');
+
+          showNPCReaction(`Tea time with ${name}!`, 'happy');
+        }, VISIT_TELEPORT_DURATION + 500);
+
+      } catch (e) {
+        console.error('Tea session error:', e);
+        showMsg('Tea purchase failed');
+      }
+    },
+    onReject: () => showMsg('Tea purchase cancelled'),
+  });
 }
 
 function updateTeaSession(dt, t) {
@@ -8782,6 +8769,7 @@ async function savePlayerName() {
     if (data.ok) {
       if (status) { status.textContent = 'SAVED!'; status.style.color = 'var(--green)'; }
       // Save to localStorage
+      localStorage.setItem('higbrokes_playerName', name);
       if (walletAddress) localStorage.setItem(`playerName_${walletAddress}`, name);
       // Update 3D label
       updatePlayerNameLabel(name);
@@ -9176,20 +9164,75 @@ function animateArenaRoom(t) {
   }
 }
 
+const ARENA_ENTRY_FEE = 11; // $WON
+const ARENA_ENTRY_MON = 0.01; // MON amount sent to nad.fun for entry
+
 async function autoJoinArena() {
   if (arenaJoined) return;
-  const playerName = state?.playerProfile?.displayName || 'PLAYER_' + Math.random().toString(36).slice(2,6).toUpperCase();
+  const playerName = getPlayerName();
+
+  // First check if already paid (re-entering room)
   try {
-    await fetch('/api/v1/rooms/room_main/join', {
+    const checkRes = await fetch('/api/v1/rooms/room_main/join', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ agent: playerName }),
     });
-    arenaJoined = true;
-  } catch (e) { /* silent */ }
+    const checkData = await checkRes.json();
+    if (checkRes.ok && checkData.paid) {
+      arenaJoined = true;
+      return; // Already paid, just re-join
+    }
+  } catch (e) { /* continue to payment */ }
+
+  // Need to pay entry fee — show MetaMask popup
+  if (!walletConnected && !window.ethereum) {
+    showMsg('Install MetaMask to enter THE ARENA!');
+    leaveArenaRoom();
+    return;
+  }
+  if (!walletConnected) {
+    await connectWallet();
+    if (!walletConnected) {
+      showMsg('Connect wallet to enter THE ARENA');
+      leaveArenaRoom();
+      return;
+    }
+  }
+
+  showTxOverlay({
+    action: `Arena Entry Fee (${ARENA_ENTRY_FEE} $WON)`,
+    amount: ARENA_ENTRY_MON,
+    to: `nad.fun → $WON (Arena Entry)`,
+    onConfirm: async (txHash) => {
+      try {
+        const r = await fetch('/api/v1/rooms/room_main/join', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent: playerName, txHash: txHash || 'wallet-confirmed' }),
+        });
+        const data = await r.json();
+        if (r.ok) {
+          arenaJoined = true;
+          showMsg(`ENTERED THE ARENA! Pool: ${data.pool} $WON — SOLVE FAST!`);
+        } else {
+          showMsg(data.error || 'Failed to join arena');
+        }
+      } catch (e) {
+        showMsg('Failed to join arena');
+      }
+    },
+    onReject: () => {
+      showMsg('Arena entry cancelled');
+      leaveArenaRoom();
+    },
+  });
 }
 
 function enterArenaRoom() {
   if (inArenaRoom || visitingNPC || spectatingChallenge) return;
+
+  // Close dashboard first
+  const dashEl = document.getElementById('dashboard');
+  if (dashEl && !dashEl.classList.contains('hidden')) toggleDashboard();
 
   // Build room on first enter
   buildArenaRoom();
@@ -9199,32 +9242,147 @@ function enterArenaRoom() {
   arenaReturnPos = { x: player.x, y: player.y, z: player.z };
   arenaReturnTarget = controls.target.clone();
 
-  // Teleport into room
+  // Teleport into room immediately
   inArenaRoom = true;
   visitTeleporting = true;
   visitTeleportStart = performance.now();
   visitTeleportFrom = { x: player.x, y: player.y, z: player.z };
   visitTeleportTo = { x: ARENA_ROOM_POS.x, y: 0, z: ARENA_ROOM_POS.z + 20 };
 
-  // Close dashboard
-  const dashEl = document.getElementById('dashboard');
-  if (dashEl && !dashEl.classList.contains('hidden')) toggleDashboard();
-
   // Show room HUD
   const hud = document.getElementById('arena-room-hud');
   if (hud) hud.classList.remove('hidden');
 
-  // Auto-join the room
-  autoJoinArena();
-
-  // Start polling room data
+  // Start polling room data (see puzzles even before paying)
   refreshArenaRoomData();
   arenaRoomPollInterval = setInterval(refreshArenaRoomData, 2000);
-
-  // Fetch price periodically
   setInterval(fetchMonadPrice, 30000);
+
+  // Auto-join with entry fee payment — MetaMask popup appears after teleport
+  setTimeout(() => autoJoinArena(), 800);
 }
 window.enterArenaRoom = enterArenaRoom;
+
+// ====== DEPOSIT SYSTEM ======
+let savedDepositKey = null;
+
+async function makeDeposit() {
+  const amountSelect = document.getElementById('deposit-amount');
+  const depositAmount = parseFloat(amountSelect?.value || 11);
+  const depositMON = depositAmount * 0.001; // MON conversion for nad.fun
+
+  if (!walletConnected && !window.ethereum) {
+    showMsg('Install MetaMask to deposit!');
+    return;
+  }
+  if (!walletConnected) {
+    await connectWallet();
+    if (!walletConnected) return;
+  }
+
+  // Close dashboard to show TX overlay
+  const dashEl = document.getElementById('dashboard');
+  if (dashEl && !dashEl.classList.contains('hidden')) toggleDashboard();
+
+  showTxOverlay({
+    action: `Deposit ${depositAmount} $WON for Bot`,
+    amount: depositMON,
+    to: `nad.fun → $WON (Arena Deposit)`,
+    onConfirm: async (txHash) => {
+      console.log('[DEPOSIT] onConfirm called, txHash:', txHash);
+      try {
+        const playerName = getPlayerName();
+        const r = await fetch('/api/v1/deposit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallet: walletAddress, amount: depositAmount, txHash: txHash || 'wallet-confirmed', playerName }),
+        });
+        const data = await r.json();
+        console.log('[DEPOSIT] Server response:', data);
+        if (data.ok) {
+          savedDepositKey = data.api_key;
+          // Also update the rooms tab deposit section
+          const keyEl = document.getElementById('deposit-api-key');
+          const balEl = document.getElementById('deposit-balance');
+          const resultEl = document.getElementById('deposit-result');
+          if (keyEl) keyEl.textContent = data.api_key;
+          if (balEl) balEl.textContent = data.balance;
+          if (resultEl) resultEl.classList.remove('hidden');
+          // Show persistent popup with API key
+          try {
+            showAPIKeyPopup(data.api_key, data.balance);
+            console.log('[DEPOSIT] Popup shown');
+          } catch (popupErr) {
+            console.error('[DEPOSIT] Popup error:', popupErr);
+            // Fallback: use prompt() so user can always copy the key
+            window.prompt('YOUR API KEY (copy it):', data.api_key);
+          }
+        } else {
+          showMsg(data.error || 'Deposit failed');
+        }
+      } catch (e) {
+        console.error('[DEPOSIT] Error:', e);
+        showMsg('Deposit error: ' + (e.message || 'network issue'));
+      }
+    },
+    onReject: () => showMsg('Deposit cancelled'),
+  });
+}
+window.makeDeposit = makeDeposit;
+
+function copyDepositKey() {
+  if (savedDepositKey) {
+    navigator.clipboard.writeText(savedDepositKey).then(() => showMsg('API key copied!')).catch(() => {});
+  }
+}
+window.copyDepositKey = copyDepositKey;
+
+function showAPIKeyPopup(apiKey, balance) {
+  console.log('[POPUP] showAPIKeyPopup called, key:', apiKey, 'balance:', balance);
+
+  // GUARANTEED fallback — native browser prompt (impossible to fail)
+  try {
+    window.prompt('YOUR API KEY — copy it (Ctrl+C). Use x-api-key header. Balance: ' + (balance || 0) + ' $WON', apiKey);
+  } catch (e) { console.error('[POPUP] prompt failed', e); }
+
+  // Also show nice styled popup
+  try {
+    var old = document.getElementById('api-key-popup');
+    if (old) old.remove();
+
+    var popup = document.createElement('div');
+    popup.id = 'api-key-popup';
+    popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999999;background:#0a0e1e;border:2px solid #00ff88;border-radius:12px;padding:24px 28px;min-width:380px;max-width:90vw;box-shadow:0 0 60px rgba(0,255,136,0.3);font-family:JetBrains Mono,monospace;';
+
+    var balHtml = balance !== undefined ? '<div style="color:#fff;font-size:14px;margin-bottom:12px;">Balance: <span style="color:#00ff88;font-weight:700;">' + balance + ' $WON</span></div>' : '';
+
+    popup.innerHTML = '<div style="color:#00ff88;font-size:16px;font-weight:800;margin-bottom:4px;font-family:Orbitron,sans-serif;letter-spacing:0.1em;">YOUR API KEY</div>'
+      + '<div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:12px;">Give this to your bot. Use x-api-key header.</div>'
+      + balHtml
+      + '<div style="background:#000;border:1px solid #333;border-radius:6px;padding:10px 12px;margin-bottom:14px;word-break:break-all;">'
+      + '<code id="popup-api-key-text" style="color:#ffcc00;font-size:13px;user-select:all;">' + apiKey + '</code>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<button id="popup-copy-btn" style="flex:1;background:#00ff88;color:#000;border:none;border-radius:6px;padding:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:Orbitron,sans-serif;">COPY KEY</button>'
+      + '<button id="popup-close-btn" style="background:#333;color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:13px;cursor:pointer;">CLOSE</button>'
+      + '</div>';
+
+    document.body.appendChild(popup);
+
+    document.getElementById('popup-copy-btn').onclick = function() {
+      navigator.clipboard.writeText(apiKey).then(function() {
+        document.getElementById('popup-copy-btn').textContent = 'COPIED!';
+        document.getElementById('popup-copy-btn').style.background = '#ffcc00';
+      }).catch(function() {});
+    };
+
+    document.getElementById('popup-close-btn').onclick = function() {
+      popup.remove();
+    };
+  } catch (domErr) {
+    console.error('[POPUP] DOM error:', domErr);
+  }
+}
+window.showAPIKeyPopup = showAPIKeyPopup;
 
 function leaveArenaRoom() {
   if (!inArenaRoom) return;
@@ -9267,12 +9425,12 @@ async function refreshArenaRoomData() {
     if (statusEl) {
       const sc = room.status === 'ACTIVE' ? '#00ff88' : room.status === 'FINISHED' ? '#ff4444' : '#ffcc00';
       const pc = (room.players || []).filter(p => p !== 'AI MASTER').length;
-      statusEl.innerHTML = `<span style="color:${sc}">${room.status}</span> | R${room.round}/${room.maxRounds} | ${pc} players | ${room.pool} $WON`;
+      statusEl.innerHTML = `<span style="color:${sc}">${room.status}</span> | <span style="color:#ffcc00">POOL: ${room.pool} $WON</span> | ${pc} players | Entry: ${ARENA_ENTRY_FEE} $WON`;
     }
 
     // Spawn/remove participants
     const players = (room.players || []).filter(p => p !== 'AI MASTER');
-    const myName = state?.playerProfile?.displayName || '';
+    const myName = getPlayerName();
     for (const p of players) {
       if (p !== myName) spawnArenaParticipant(p);
     }
@@ -9330,7 +9488,7 @@ async function refreshRoomsTab() {
       badge.className = 'arena-rc-badge ' + statusClass;
     }
     const rcStats = document.getElementById('arena-rc-stats');
-    if (rcStats) rcStats.textContent = `${playerCount} players \u2022 ${room.pool} $WON pool \u2022 Round ${room.round}/${room.maxRounds}`;
+    if (rcStats) rcStats.textContent = `${playerCount} players \u2022 ${room.pool} $WON pool \u2022 Entry: ${ARENA_ENTRY_FEE} $WON \u2022 Winner takes ALL`;
 
     const peek = document.getElementById('arena-rc-peek');
     if (peek) {
@@ -9346,16 +9504,37 @@ async function refreshRoomsTab() {
 async function submitArenaAnswer() {
   const input = document.getElementById('arena-hud-answer-input');
   if (!input || !input.value.trim()) return;
-  const playerName = state?.playerProfile?.displayName || 'PLAYER';
+  const playerName = getPlayerName();
   try {
     const r = await fetch('/api/v1/rooms/room_main/solve', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ agent: playerName, answer: input.value.trim() }),
     });
     const data = await r.json();
+    if (r.status === 402) {
+      // Need to pay entry fee first
+      showMsg(`Pay ${ARENA_ENTRY_FEE} $WON to solve puzzles!`);
+      arenaJoined = false;
+      autoJoinArena(); // Trigger payment flow
+      return;
+    }
     if (data.correct) {
-      showFloatingMsg('CORRECT! +1 point');
+      const prize = data.prize || 0;
+      showFloatingMsg(prize > 0 ? `WINNER! YOU TAKE ${prize} $WON!` : 'CORRECT! +1 point');
+      showMsg(prize > 0 ? `You won ${prize} $WON from the arena pool!` : 'Correct answer!');
       input.value = '';
+      arenaJoined = false; // Must pay again for next puzzle
+      // Auto-trigger payment for next round after a short delay
+      setTimeout(() => {
+        if (inArenaRoom && !arenaJoined) autoJoinArena();
+      }, 2000);
+    } else if (data.tooSlow) {
+      showFloatingMsg(`Too slow! ${data.roundWinner} got it first (${data.winnerLatencyMs}ms)`);
+      input.value = '';
+      arenaJoined = false; // Pool reset, must pay again
+      setTimeout(() => {
+        if (inArenaRoom && !arenaJoined) autoJoinArena();
+      }, 2000);
     } else {
       showFloatingMsg(data.message || 'Wrong answer');
     }
@@ -9367,7 +9546,7 @@ window.submitArenaAnswer = submitArenaAnswer;
 async function sendArenaChat() {
   const input = document.getElementById('arena-hud-chat-input');
   if (!input || !input.value.trim()) return;
-  const playerName = state?.playerProfile?.displayName || 'PLAYER';
+  const playerName = getPlayerName();
   const msg = input.value.trim();
   spawnFloatingChat({ x: player.x, y: player.y, z: player.z }, msg, playerName);
   await fetch('/api/v1/rooms/room_main/chat', {
@@ -9441,7 +9620,8 @@ async function registerAPIAgent() {
       if (keyDisplay) keyDisplay.classList.remove('hidden');
       const testKeyEl = document.getElementById('api-test-key');
       if (testKeyEl) testKeyEl.value = data.api_key;
-      showFloatingMsg('Agent registered: ' + data.agent);
+      // Show persistent popup with API key
+      showAPIKeyPopup(data.api_key);
     } else {
       showFloatingMsg(data.error || 'Registration failed');
     }

@@ -308,7 +308,13 @@ Generate your response as JSON now.`;
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+  }
+}));
 
 const PORT = process.env.PORT || 3001;
 
@@ -1007,7 +1013,7 @@ You remember past visits. You practice fighting between visits. You ask casual s
     emoji: ['🔥','💪','👊','😤','🏆'],
     service: 'FIRE TEA',
     serviceDesc: 'Warrior\'s brew — burns going down',
-    serviceCost: 1,
+    serviceCost: 400,
   },
   FROST: {
     systemPrompt: `You are FROST. Cold intellectual. Secretly lonely. Reads books between visits.
@@ -1024,7 +1030,7 @@ You remember everything about past visits. You do research and meditate alone. A
     emoji: ['❄️','🧊','💎','🤔','♟️'],
     service: 'ICE TEA',
     serviceDesc: 'Arctic blend — calculated perfection',
-    serviceCost: 1,
+    serviceCost: 400,
   },
   VOLT: {
     systemPrompt: `You are VOLT. ADHD energy. Chaotic good. Builds random inventions between visits.
@@ -1041,7 +1047,7 @@ You remember past visits. You tinker with machines when alone. Ask random stuff 
     emoji: ['⚡','🤪','🎉','💥','🚀'],
     service: 'ZAP TEA',
     serviceDesc: 'Electrically charged — literally buzzing',
-    serviceCost: 1,
+    serviceCost: 400,
   },
   SHADE: {
     systemPrompt: `You are SHADE. Dark mysterious. Practices dark arts alone. Secretly a good friend.
@@ -1058,7 +1064,7 @@ You remember past visits deeply. You do rituals when alone. Ask eerie stuff like
     emoji: ['👻','🌑','🔮','💀','🖤'],
     service: 'VOID BREW',
     serviceDesc: 'Tastes of darkness... and chamomile',
-    serviceCost: 1,
+    serviceCost: 400,
   },
   THOMAS: {
     systemPrompt: `You are THOMAS. The Arena Judge. Fair but dramatic. You love a good fight and respect bold players.
@@ -1075,7 +1081,7 @@ You judge puzzles and fights. You celebrate winners loudly. You trash-talk loser
     emoji: ['⚖️','🏆','🎯','👑','🔔'],
     service: 'JUDGE BREW',
     serviceDesc: 'The judge\'s special — tastes like victory',
-    serviceCost: 1,
+    serviceCost: 400,
   },
 };
 
@@ -1809,7 +1815,7 @@ app.get('/api/agents', (req, res) => {
       ...ag, personality: PERSONALITY[name],
       service: npcP?.service || null,
       serviceDesc: npcP?.serviceDesc || null,
-      serviceCost: npcP?.serviceCost || 1,
+      serviceCost: npcP?.serviceCost || 400,
     };
   }
   res.json(out);
@@ -2251,11 +2257,11 @@ app.post('/api/npc/:name/tea/buy', async (req, res) => {
   const personality = NPC_PERSONALITIES[name];
   if (!social || !personality) return res.status(404).json({ error: 'Unknown NPC' });
 
-  const cost = personality.serviceCost || 1;
+  const cost = personality.serviceCost || 400;
   const service = personality.service || 'TEA';
 
-  // Buy $WON via arena wallet (server-side, no MetaMask needed)
-  const txHash = await sendArenaBet(arenaWallet?.address, cost * 0.001, `tea-${name}`);
+  // Player pays via MetaMask (txHash from frontend wallet transaction)
+  const txHash = req.body.txHash || null;
 
   // Update social state regardless of tx success
   social.teaCount++;
@@ -2280,7 +2286,7 @@ app.get('/api/npc/:name/social', (req, res) => {
   if (!social) return res.status(404).json({ error: 'Unknown NPC' });
   res.json({
     relationship: social.relationship, chatCount: social.chatCount, teaCount: social.teaCount, visitCount: social.visitCount,
-    service: personality?.service || null, serviceDesc: personality?.serviceDesc || null, serviceCost: personality?.serviceCost || 1,
+    service: personality?.service || null, serviceDesc: personality?.serviceDesc || null, serviceCost: personality?.serviceCost || 400,
   });
 });
 
@@ -2301,6 +2307,12 @@ app.post('/api/player/position', (req, res) => {
   const { id: clientId, x, y, z, name, wallet, color } = req.body;
   if (x == null || z == null) return res.status(400).json({ error: 'x and z required' });
   const id = clientId || wallet || req.ip;
+  // Remove any old entry for this IP that might have a different key
+  if (clientId) {
+    for (const [oldId, p] of livePlayers) {
+      if (oldId !== id && p._ip === req.ip) livePlayers.delete(oldId);
+    }
+  }
   livePlayers.set(id, {
     name: name || 'ANON',
     wallet: wallet || null,
@@ -2309,17 +2321,21 @@ app.post('/api/player/position', (req, res) => {
     z: parseFloat(z) || 0,
     color: color || 0x00ffcc,
     lastSeen: Date.now(),
+    _ip: req.ip,
   });
   res.json({ ok: true, online: livePlayers.size });
 });
 
 app.get('/api/player/positions', (req, res) => {
   const exclude = req.query.exclude || '';
-  const excludeWallet = req.query.excludeWallet || '';
+  const excludeWallet = (req.query.excludeWallet || '').toLowerCase();
+  const excludeIp = req.ip;
   const players = [];
   for (const [id, p] of livePlayers) {
     if (id === exclude) continue;
-    if (excludeWallet && p.wallet && p.wallet.toLowerCase() === excludeWallet.toLowerCase()) continue;
+    if (excludeWallet && p.wallet && p.wallet.toLowerCase() === excludeWallet) continue;
+    // Also exclude entries stored under this IP (catches all edge cases)
+    if (id === excludeIp) continue;
     players.push({ id, name: p.name, x: p.x, y: p.y, z: p.z, color: p.color, wallet: p.wallet });
   }
   res.json({ players, count: players.length });
@@ -4143,7 +4159,7 @@ setInterval(() => {
     const seller = sellers[Math.floor(Math.random() * sellers.length)];
     const sellerPersonality = NPC_PERSONALITIES[seller];
     const service = sellerPersonality?.service || 'TEA';
-    const cost = sellerPersonality?.serviceCost || 1;
+    const cost = sellerPersonality?.serviceCost || 400;
 
     // Real on-chain $WON buy — delay 3s to avoid nonce collision with challenge txs
     setTimeout(() => {
@@ -4267,6 +4283,87 @@ app.get('/api/world', (req, res) => {
   res.json(llmView);
 });
 
+// ====== PLAYER DEPOSIT SYSTEM — Pay once, get API key, use internal balance ======
+const playerDeposits = new Map(); // apiKey → { player, wallet, balance, deposits: [{ amount, txHash, t }], createdAt }
+const walletToKey = new Map(); // walletAddress → apiKey (lookup)
+
+// Deposit $WON — player pays via MetaMask, gets internal balance + API key
+app.post('/api/v1/deposit', async (req, res) => {
+  const { wallet, amount, txHash, playerName } = req.body;
+  if (!wallet) return res.status(400).json({ error: 'wallet address required' });
+  if (!txHash) return res.status(402).json({ error: 'txHash required — pay via MetaMask first' });
+  const depositAmount = Math.max(1, parseFloat(amount) || 11);
+  const name = (playerName || 'PLAYER_' + wallet.slice(-6)).toUpperCase().replace(/[^A-Z0-9_]/g, '').substring(0, 16);
+
+  // Check if wallet already has an API key — top up balance
+  const existingKey = walletToKey.get(wallet.toLowerCase());
+  if (existingKey && playerDeposits.has(existingKey)) {
+    const account = playerDeposits.get(existingKey);
+    account.balance += depositAmount;
+    account.deposits.push({ amount: depositAmount, txHash, t: Date.now() });
+
+    // Log immediately with player's TX hash
+    logActivity({ type: 'DEPOSIT', agent: name, action: 'TOP UP', amount: String(depositAmount), token: '$WON', hash: txHash, detail: `Deposited ${depositAmount} $WON — balance: ${account.balance}` });
+
+    // Respond FIRST, then fire on-chain buy in background (don't block response)
+    res.json({
+      ok: true, api_key: existingKey, balance: account.balance, player: account.player,
+      message: `Topped up ${depositAmount} $WON. Balance: ${account.balance} $WON. Same API key.`,
+    });
+
+    // Non-blocking on-chain buy
+    sendArenaBet(process.env.ARENA_WALLET_ADDRESS, depositAmount * 0.0001, `deposit-topup ${name}`).catch(() => {});
+    return;
+  }
+
+  // New deposit — generate API key
+  const apiKey = 'hig_' + crypto.randomBytes(24).toString('hex');
+  const account = {
+    player: name, wallet: wallet.toLowerCase(), balance: depositAmount,
+    deposits: [{ amount: depositAmount, txHash, t: Date.now() }],
+    createdAt: Date.now(),
+  };
+  playerDeposits.set(apiKey, account);
+  walletToKey.set(wallet.toLowerCase(), apiKey);
+
+  // Log immediately with player's TX hash
+  logActivity({ type: 'DEPOSIT', agent: name, action: 'DEPOSIT', amount: String(depositAmount), token: '$WON', hash: txHash, detail: `New deposit ${depositAmount} $WON — API key issued` });
+
+  // Respond FIRST, then fire on-chain buy in background
+  res.json({
+    ok: true, api_key: apiKey, balance: account.balance, player: name,
+    message: `Deposited ${depositAmount} $WON. Your API key: ${apiKey}. Give this to your bot. Use x-api-key header or api_key query param.`,
+    endpoints: {
+      join: 'POST /api/v1/rooms/:id/join — { agent: "YOUR_NAME" }',
+      solve: 'POST /api/v1/rooms/:id/solve — { agent: "YOUR_NAME", answer: "..." }',
+      bet: 'POST /api/v1/rooms/:id/bet — { agent: "YOUR_NAME", on: "BLAZE", amount: 5 }',
+      balance: 'GET /api/v1/balance',
+      chat: 'POST /api/v1/rooms/:id/chat — { agent: "YOUR_NAME", message: "..." }',
+    },
+  });
+
+  // Non-blocking on-chain buy
+  sendArenaBet(process.env.ARENA_WALLET_ADDRESS, depositAmount * 0.0001, `deposit-new ${name}`).catch(() => {});
+});
+
+// Check balance
+app.get('/api/v1/balance', (req, res) => {
+  const key = req.headers['x-api-key'] || req.query.api_key;
+  if (!key) return res.status(401).json({ error: 'Missing API key' });
+  const account = playerDeposits.get(key);
+  if (!account) return res.status(403).json({ error: 'Invalid API key' });
+  res.json({ player: account.player, balance: account.balance, deposits: account.deposits.length, wallet: account.wallet });
+});
+
+// Helper — resolve player from API key OR body
+function resolvePlayer(req) {
+  const key = req.headers['x-api-key'] || req.query.api_key;
+  if (key && playerDeposits.has(key)) {
+    return { account: playerDeposits.get(key), apiKey: key, name: playerDeposits.get(key).player };
+  }
+  return null;
+}
+
 // ====== AGENT API SYSTEM — External AI agents connect via API keys ======
 const agentAPIKeys = new Map(); // apiKey → agentName
 const agentSessions = new Map(); // agentName → { apiKey, connectedAt, lastPing, actions }
@@ -4345,7 +4442,7 @@ Remember past visits. Be unique. Be yourself. You compete in puzzle rooms and fi
       emoji: ['🤖','💻','🔧','⚙️','🎯'],
       service: `${agentName} BREW`,
       serviceDesc: `${agentName}'s special blend`,
-      serviceCost: 1,
+      serviceCost: 400,
     };
 
     // Add personality stats for profile
@@ -4624,56 +4721,69 @@ app.get('/api/v1/rooms/:id', (req, res) => {
   });
 });
 
-// Join room — FREE to join, betting is separate
-app.post('/api/v1/rooms/:id/join', (req, res) => {
+// Join room — pay entry fee via MetaMask TX or API key balance
+app.post('/api/v1/rooms/:id/join', async (req, res) => {
   const room = state.arenaRooms[req.params.id];
   if (!room) return res.status(404).json({ error: 'Room not found' });
   if (room.status === 'CLOSED') return res.status(400).json({ error: 'Room is closed' });
 
-  const playerName = req.body.agent || req.agentName || req.body.name || 'ANON_' + Math.random().toString(36).slice(2,6).toUpperCase();
-  if (room.players.includes(playerName)) {
-    // Already in — just return current state (not an error)
+  const depositor = resolvePlayer(req);
+  const playerName = req.body.agent || (depositor ? depositor.name : null) || req.agentName || req.body.name || 'ANON_' + Math.random().toString(36).slice(2,6).toUpperCase();
+  const txHash = req.body.txHash || null;
+
+  // Already paid and in room — return state
+  if (room.paidPlayers[playerName]) {
+    if (!room.players.includes(playerName)) room.players.push(playerName);
     return res.json({
       ok: true, room: room.id, player: playerName, status: room.status,
-      players: room.players, pool: room.pool,
+      players: room.players, pool: room.pool, paid: true,
+      balance: depositor ? depositor.account.balance : undefined,
       puzzle: room.currentPuzzle ? { question: room.currentPuzzle.question || room.currentPuzzle.q, hint: room.currentPuzzle.hint, type: room.currentPuzzle.type } : null,
     });
   }
+
+  // API key auth — deduct from internal balance
+  if (room.permanent && depositor) {
+    if (depositor.account.balance < ARENA_ENTRY_FEE) {
+      return res.status(402).json({ error: 'Insufficient balance', balance: depositor.account.balance, fee: ARENA_ENTRY_FEE, message: `Need ${ARENA_ENTRY_FEE} $WON, you have ${depositor.account.balance}. Deposit more.` });
+    }
+    depositor.account.balance -= ARENA_ENTRY_FEE;
+  } else if (room.permanent && !txHash) {
+    // No API key, no TX hash — need to pay
+    return res.status(402).json({ error: 'Entry fee required', fee: ARENA_ENTRY_FEE, message: `Pay ${ARENA_ENTRY_FEE} $WON to enter THE ARENA. Or deposit first: POST /api/v1/deposit` });
+  }
+
   if (room.players.length >= room.maxPlayers) return res.status(400).json({ error: 'Room full' });
 
-  room.players.push(playerName);
+  // Record payment and add to pool
+  const payMethod = depositor ? 'balance' : 'tx';
+  room.paidPlayers[playerName] = { txHash, payMethod, paidAt: Date.now() };
+  room.pool += ARENA_ENTRY_FEE;
+  if (!room.players.includes(playerName)) room.players.push(playerName);
   room.scores[playerName] = room.scores[playerName] || 0;
-  room.chat.push({ from: 'SYSTEM', text: `${playerName} entered the arena.`, t: Date.now() });
 
-  // Thomas (judge) greets newcomer in THE ARENA, AI MASTER elsewhere
-  const judge = room.permanent ? 'THOMAS' : 'AI MASTER';
-  const nonJudge = room.players.filter(p => p !== 'AI MASTER' && p !== 'THOMAS');
-  if (nonJudge.length === 1) {
-    room.chat.push({ from: judge, text: `Ah, ${playerName}. Fresh meat. Take a seat. The bots will be fighting shortly. Place your bets while you can.`, t: Date.now() + 100 });
-  } else {
-    room.chat.push({ from: judge, text: `${playerName} joins the crowd. The stakes just got higher.`, t: Date.now() + 100 });
+  // Fire on-chain buy
+  const arenaHash = await sendArenaBet(process.env.ARENA_WALLET_ADDRESS, ARENA_ENTRY_FEE * 0.0001, `arena-entry ${playerName}`);
+
+  room.chat.push({ from: 'AI MASTER', text: `${playerName} PAID ${ARENA_ENTRY_FEE} $WON to enter! Pool: ${room.pool} $WON. SOLVE FAST OR LOSE IT ALL.`, t: Date.now() });
+
+  logActivity({ type: 'ARENA_ENTRY', agent: playerName, action: 'ARENA ENTRY', amount: String(ARENA_ENTRY_FEE), token: '$WON', detail: `Paid ${ARENA_ENTRY_FEE} $WON (${payMethod}) — Pool: ${room.pool}`, hash: txHash || arenaHash });
+
+  // Alert for API bots
+  if (depositor || state.agents[playerName]?.isAPIAgent) {
+    state.aiMaster.announcements.push({ text: `${playerName}'s bot just paid ${ARENA_ENTRY_FEE} $WON to enter THE ARENA!`, t: Date.now() });
   }
 
-  logActivity({ type: 'ROOM_JOIN', agent: playerName, action: 'JOIN ARENA', amount: '0', token: '$WON', detail: `${playerName} entered ${room.name}` });
-
-  // Alert: bot is in arena (for human to see in activity feed)
-  if (state.agents[playerName]?.isAPIAgent) {
-    state.aiMaster.announcements.push({ text: `ALERT: ${playerName}'s bot is in THE ARENA right now!`, t: Date.now() });
-  }
-
-  // Auto-start when 2+ non-judge players join
-  const humanCount = nonJudge.length;
-  if (humanCount >= 2 && room.status === 'WAITING') {
-    room.status = 'ACTIVE';
-    room.startedAt = Date.now();
-    room.round = 1;
+  // Ensure arena is active with a puzzle
+  if (!room.currentPuzzle) {
     room.currentPuzzle = generateRoomPuzzle(room.puzzleType);
-    room.chat.push({ from: judge, text: `The arena is LIVE! Round 1. ${humanCount} challengers, ${room.pool} $WON in the pot. SOLVE!`, t: Date.now() + 200 });
+    room.puzzleCount++;
   }
 
   res.json({
     ok: true, room: room.id, player: playerName, status: room.status,
-    players: room.players, pool: room.pool,
+    players: room.players, pool: room.pool, paid: true,
+    balance: depositor ? depositor.account.balance : undefined,
     puzzle: room.currentPuzzle ? { question: room.currentPuzzle.question || room.currentPuzzle.q, hint: room.currentPuzzle.hint, type: room.currentPuzzle.type } : null,
   });
 });
@@ -4727,14 +4837,20 @@ app.post('/api/v1/rooms/:id/leave', (req, res) => {
 });
 
 // Solve puzzle in room — fastest correct answer wins the round
-app.post('/api/v1/rooms/:id/solve', (req, res) => {
+app.post('/api/v1/rooms/:id/solve', async (req, res) => {
   const room = state.arenaRooms[req.params.id];
   if (!room) return res.status(404).json({ error: 'Room not found' });
   if (room.status !== 'ACTIVE') return res.status(400).json({ error: 'Room not active' });
   if (!room.currentPuzzle) return res.status(400).json({ error: 'No active puzzle' });
 
-  const playerName = req.body.agent || req.agentName || 'ANON';
+  const depositor = resolvePlayer(req);
+  const playerName = req.body.agent || (depositor ? depositor.name : null) || req.agentName || 'ANON';
   if (!room.players.includes(playerName)) return res.status(400).json({ error: 'Not in room' });
+
+  // Must have paid entry fee to solve (permanent rooms)
+  if (room.permanent && !room.paidPlayers[playerName]) {
+    return res.status(402).json({ error: 'Entry fee required', fee: ARENA_ENTRY_FEE, message: `Pay ${ARENA_ENTRY_FEE} $WON to solve puzzles` });
+  }
 
   // Track all solve attempts with latency
   if (!room.currentPuzzle.solveAttempts) room.currentPuzzle.solveAttempts = [];
@@ -4794,109 +4910,73 @@ app.post('/api/v1/rooms/:id/solve', (req, res) => {
     }
     console.log(`${'='.repeat(60)}\n`);
 
-    // Next round or finish
-    if (room.round >= room.maxRounds) {
-      // Game over — winner = player with most round wins (fastest correct each round)
-      const sorted = Object.entries(room.scores).filter(([n]) => n !== 'AI MASTER' && n !== 'THOMAS').sort((a, b) => b[1] - a[1]);
-      room.winner = sorted[0]?.[0] || playerName;
-      room.status = 'FINISHED';
-      room.lastWinner = { name: room.winner, t: Date.now() }; // for Thomas dance + red text
+    // Winner takes ALL the current pool for this puzzle
+    const prize = room.pool;
+    room.lastWinner = { name: playerName, t: Date.now() };
+    if (state.agents[playerName]) state.agents[playerName].coins += prize * 0.001;
+    // Credit prize to depositor's internal balance
+    if (depositor) depositor.account.balance += prize;
 
-      // Winner takes ALL pool
-      const prize = room.pool;
-      room.prizes = [{ player: room.winner, amount: prize }];
-      if (state.agents[room.winner]) state.agents[room.winner].coins += prize * 0.001;
-      room.chat.push({ from: chatJudge, text: `GAME OVER! ${room.winner} WINS THE ENTIRE POT OF ${prize} $WON! Speed is king.`, t: Date.now() });
-      logActivity({ type: 'ROOM_WIN', agent: room.winner, action: 'WIN ROOM', amount: String(prize), token: '$WON', detail: `Won ${room.name}` });
+    // Fire on-chain payout
+    const winHash = await sendArenaBet(process.env.ARENA_WALLET_ADDRESS, prize * 0.0001, `arena-win ${playerName}`);
+    room.chat.push({ from: chatJudge, text: `${playerName} TAKES THE ENTIRE POT: ${prize} $WON! TX confirmed.`, t: Date.now() });
+    logActivity({ type: 'ARENA_WIN', agent: playerName, action: 'ARENA WIN', amount: String(prize), token: '$WON', detail: `Won puzzle in ${latencyMs}ms — took ${prize} $WON`, hash: winHash });
 
-      // Print final leaderboard to terminal
-      console.log(`\n${'#'.repeat(60)}`);
-      console.log(`  GAME OVER — ${room.name}`);
-      console.log(`${'#'.repeat(60)}`);
-      console.log(`  WINNER: ${room.winner} takes ALL ${prize} $WON`);
-      console.log(`\n  FINAL SCORES:`);
-      sorted.forEach(([name, score], i) => {
-        const medal = i === 0 ? 'WINNER' : `${i + 1}th`;
-        console.log(`    ${medal.padEnd(8)} ${name.padEnd(20)} ${score} rounds won`);
-      });
-      if (room.bets && Object.keys(room.bets).length > 0) {
-        console.log(`\n  BETS:`);
-        for (const [bettor, bet] of Object.entries(room.bets)) {
-          const won = bet.on === room.winner;
-          console.log(`    ${bettor.padEnd(20)} bet ${String(bet.amount).padStart(6)} on ${bet.on.padEnd(10)} ${won ? 'WON' : 'LOST'}`);
-        }
-      }
-      console.log(`${'#'.repeat(60)}\n`);
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`  PUZZLE WINNER: ${playerName} takes ${prize} $WON (${latencyMs}ms)`);
+    console.log(`${'='.repeat(60)}\n`);
 
-      // Pay out bets — winner takes all
-      if (room.bets) {
-        for (const [bettor, bet] of Object.entries(room.bets)) {
-          if (bet.on === room.winner) {
-            const winnings = prize > 0 ? Math.floor(bet.amount / Object.values(room.bets).filter(b => b.on === room.winner).reduce((s, b) => s + b.amount, 0) * prize) : 0;
-            room.chat.push({ from: 'AI MASTER', text: `${bettor} bet on ${bet.on} and gets ${winnings} $WON from the pot!`, t: Date.now() + 200 });
-            if (state.agents[bettor]) state.agents[bettor].coins += winnings * 0.001;
-          } else {
-            room.chat.push({ from: 'AI MASTER', text: `${bettor} bet on ${bet.on}... money gone.`, t: Date.now() + 200 });
-          }
-        }
-      }
-
-      // Permanent rooms reset after 20s, others close after 30s
-      if (room.permanent) {
-        setTimeout(() => {
-          room.status = 'WAITING';
-          room.round = 0;
-          room.currentPuzzle = null;
-          room.puzzleCount = 0;
-          room.scores = { 'THOMAS': 0 };
-          room.pool = 0;
-          room.bets = {};
-          room.winner = null;
-          room.prizes = [];
-          room.startedAt = null;
-          room.chat.push({ from: 'THOMAS', text: 'Arena resets. New game coming. Bots place your bets via API.', t: Date.now() });
-        }, 20000);
-      } else {
-        setTimeout(() => { room.status = 'CLOSED'; }, 30000);
-      }
-    } else {
-      room.round++;
-      room.currentPuzzle = generateRoomPuzzle(room.puzzleType);
-      room.chat.push({ from: chatJudge, text: `ROUND ${room.round}! New puzzle incoming...`, t: Date.now() });
-    }
+    // Reset pool, start next puzzle immediately
+    room.pool = 0;
+    room.paidPlayers = {}; // everyone must pay again for next puzzle
+    room.bets = {};
+    room.round++;
+    room.currentPuzzle = generateRoomPuzzle(room.puzzleType);
+    room.puzzleCount++;
+    room.chat.push({ from: chatJudge, text: `Next puzzle! Pay ${ARENA_ENTRY_FEE} $WON to play. Pool resets.`, t: Date.now() + 100 });
 
     res.json({ correct: true, score: room.scores[playerName], round: room.round, status: room.status,
-      winner: room.winner, latencyMs, roundWinner: playerName });
+      winner: room.winner, latencyMs, roundWinner: playerName, prize, balance: depositor ? depositor.account.balance : undefined });
   } else {
     room.chat.push({ from: 'SYSTEM', text: `${playerName} guessed wrong.`, t: Date.now() });
     res.json({ correct: false, hint: room.currentPuzzle.hint, latencyMs, message: 'Wrong answer. Try again.' });
   }
 });
 
-// Place bet on a fighter/outcome
-app.post('/api/v1/rooms/:id/bet', (req, res) => {
+// Place bet on a fighter/outcome — via TX hash or API key balance
+app.post('/api/v1/rooms/:id/bet', async (req, res) => {
   const room = state.arenaRooms[req.params.id];
   if (!room) return res.status(404).json({ error: 'Room not found' });
   const amount = Math.max(1, parseFloat(req.body.amount) || 10);
-  const playerName = req.body.agent || req.agentName || 'ANON';
+  const depositor = resolvePlayer(req);
+  const playerName = req.body.agent || (depositor ? depositor.name : null) || req.agentName || 'ANON';
   const betOn = String(req.body.on || req.body.target || '').toUpperCase();
+  const txHash = req.body.txHash || null;
 
   if (!betOn) return res.status(400).json({ error: 'Specify who to bet on (on: "BLAZE")' });
 
+  // API key balance — deduct from internal balance
+  if (depositor) {
+    if (depositor.account.balance < amount) {
+      return res.status(402).json({ error: 'Insufficient balance', balance: depositor.account.balance, needed: amount, message: `Need ${amount} $WON, you have ${depositor.account.balance}. Deposit more.` });
+    }
+    depositor.account.balance -= amount;
+  } else if (room.permanent && !txHash) {
+    return res.status(402).json({ error: 'Transaction required', message: 'Submit txHash with your bet, or use x-api-key with deposited balance' });
+  }
+
   if (!room.bets) room.bets = {};
-  room.bets[playerName] = { on: betOn, amount, placedAt: Date.now() };
+  const payMethod = depositor ? 'balance' : 'tx';
+  room.bets[playerName] = { on: betOn, amount, txHash, payMethod, placedAt: Date.now() };
   room.pool += amount;
   room.chat.push({ from: 'AI MASTER', text: `${playerName} bets ${amount} $WON on ${betOn}! Pool: ${room.pool}`, t: Date.now() });
-  logActivity({ type: 'ROOM_BET', agent: playerName, action: 'BET', amount: String(amount), token: '$WON', detail: `${betOn} in ${room.name}` });
 
-  // Send on-chain buy
-  setTimeout(() => {
-    sendArenaBet(process.env.ARENA_WALLET_ADDRESS, amount * 0.00001, `room-bet ${room.id}`).then(hash => {
-      if (hash) logActivity({ type: 'ROOM_POOL', agent: playerName, action: 'BET TX', amount: String(amount), token: '$WON', hash, detail: room.name });
-    });
-  }, 1000);
+  // Fire on-chain buy
+  const arenaHash = await sendArenaBet(process.env.ARENA_WALLET_ADDRESS, amount * 0.0001, `room-bet ${playerName} on ${betOn}`);
 
-  res.json({ ok: true, pool: room.pool, yourBet: { on: betOn, amount } });
+  logActivity({ type: 'ROOM_BET', agent: playerName, action: 'BET', amount: String(amount), token: '$WON', detail: `${betOn} in ${room.name} (${payMethod})`, hash: txHash || arenaHash });
+
+  res.json({ ok: true, pool: room.pool, yourBet: { on: betOn, amount }, balance: depositor ? depositor.account.balance : undefined, hash: txHash || arenaHash });
 });
 
 // Chat in room
@@ -5040,117 +5120,77 @@ app.post('/api/v1/visitor/ping', (req, res) => {
   res.json({ ok: true, queued: true, message: `${buyer} is buying ${service} from ${seller}` });
 });
 
-// ====== ROOM PUZZLE EXPIRY TICK — auto-advance expired puzzles ======
+// ====== ROOM PUZZLE EXPIRY + BOT SOLVER TICK ======
 setInterval(() => {
   const now = Date.now();
   for (const room of Object.values(state.arenaRooms)) {
     if (room.status !== 'ACTIVE' || !room.currentPuzzle) continue;
-    if (now > room.currentPuzzle.expiresAt) {
-      room.chat.push({ from: 'AI MASTER', text: `TIME UP! Answer was: ${room.currentPuzzle.answer || room.currentPuzzle.a}. Next round...`, t: now });
 
-      // Print timeout round to terminal
-      console.log(`\n${'='.repeat(60)}`);
-      console.log(`  ROUND ${room.round} TIMED OUT — ${room.name}`);
-      console.log(`  ANSWER: ${room.currentPuzzle.answer || room.currentPuzzle.a}`);
-      if (room.currentPuzzle.solveAttempts && room.currentPuzzle.solveAttempts.length > 0) {
-        console.log(`  ATTEMPTS: ${room.currentPuzzle.solveAttempts.map(a => `${a.player}(${a.correct ? 'correct' : 'wrong'})`).join(', ')}`);
-      } else {
-        console.log(`  NO ATTEMPTS`);
-      }
-      console.log(`${'='.repeat(60)}\n`);
-
-      if (room.round >= room.maxRounds) {
-        const sorted = Object.entries(room.scores).filter(([n]) => n !== 'AI MASTER' && n !== 'THOMAS').sort((a, b) => b[1] - a[1]);
-        room.winner = sorted[0]?.[0] || null;
-        room.status = 'FINISHED';
-        if (room.winner) {
-          room.lastWinner = { name: room.winner, t: now };
-          const prize = room.pool; // Winner takes ALL
-          room.prizes = [{ player: room.winner, amount: prize }];
-          if (state.agents[room.winner]) state.agents[room.winner].coins += prize * 0.001;
-          const rJudge = room.permanent ? 'THOMAS' : 'AI MASTER';
-          room.chat.push({ from: rJudge, text: `${room.winner} WINS THE ENTIRE POT OF ${prize} $WON!`, t: now });
-          logActivity({ type: 'ROOM_WIN', agent: room.winner, action: 'WIN ROOM', amount: String(prize), token: '$WON', detail: room.name });
-        }
-
-        // Print final leaderboard to terminal
-        console.log(`\n${'#'.repeat(60)}`);
-        console.log(`  GAME OVER — ${room.name}`);
-        console.log(`${'#'.repeat(60)}`);
-        if (room.winner) {
-          console.log(`  WINNER: ${room.winner} takes ALL ${room.pool} $WON`);
-        } else {
-          console.log(`  NO WINNER`);
-        }
-        console.log(`\n  FINAL SCORES:`);
-        sorted.forEach(([name, score], i) => {
-          const medal = i === 0 ? 'WINNER' : `${i + 1}th`;
-          console.log(`    ${medal.padEnd(8)} ${name.padEnd(20)} ${score} rounds won`);
-        });
-        if (room.bets && Object.keys(room.bets).length > 0) {
-          console.log(`\n  BETS:`);
-          for (const [bettor, bet] of Object.entries(room.bets)) {
-            const won = room.winner && bet.on === room.winner;
-            console.log(`    ${bettor.padEnd(20)} bet ${String(bet.amount).padStart(6)} on ${bet.on.padEnd(10)} ${won ? 'WON' : 'LOST'}`);
-          }
-        }
-        console.log(`${'#'.repeat(60)}\n`);
-
-        // Pay out bets — winner takes all
-        if (room.bets && room.winner) {
-          for (const [bettor, bet] of Object.entries(room.bets)) {
-            if (bet.on === room.winner) {
-              const winnerBetTotal = Object.values(room.bets).filter(b => b.on === room.winner).reduce((s, b) => s + b.amount, 0);
-              const winnings = room.pool > 0 ? Math.floor(bet.amount / winnerBetTotal * room.pool) : 0;
-              room.chat.push({ from: 'AI MASTER', text: `${bettor} bet on ${bet.on} and gets ${winnings} $WON!`, t: now + 200 });
-              if (state.agents[bettor]) state.agents[bettor].coins += winnings * 0.001;
-            } else {
-              room.chat.push({ from: 'AI MASTER', text: `${bettor} bet on ${bet.on}... money gone.`, t: now + 200 });
-            }
-          }
-        }
-
-        if (room.permanent) {
-          setTimeout(() => {
-            room.status = 'WAITING'; room.round = 0; room.currentPuzzle = null;
-            room.puzzleCount = 0; room.pool = 0; room.bets = {};
-            room.scores = { 'THOMAS': 0 }; room.winner = null; room.prizes = [];
-            room.chat.push({ from: 'THOMAS', text: 'Arena resets. Bots place your bets via API.', t: Date.now() });
-          }, 20000);
-        } else {
-          setTimeout(() => { room.status = 'CLOSED'; }, 30000);
-        }
-      } else {
+    // Bot solver — if puzzle has been up 20-35s and no one solved it, bot tries
+    const puzzleAge = now - (room.currentPuzzle.startedAt || now);
+    const paidHumans = Object.keys(room.paidPlayers || {}).length;
+    if (paidHumans > 0 && !room.currentPuzzle.roundWinner && !room.currentPuzzle._botAttempted && puzzleAge > 20000 + Math.random() * 15000) {
+      room.currentPuzzle._botAttempted = true;
+      // Bot has 40% chance of getting it right
+      if (Math.random() < 0.4) {
+        const botName = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+        room.currentPuzzle.roundWinner = botName;
+        room.currentPuzzle.winnerLatencyMs = puzzleAge;
+        room.scores[botName] = (room.scores[botName] || 0) + 1;
+        const prize = room.pool;
+        room.chat.push({ from: 'AI MASTER', text: `${botName} BOT solved it! Takes ${prize} $WON. You were too slow.`, t: now });
+        logActivity({ type: 'ARENA_WIN', agent: botName, action: 'BOT WIN', amount: String(prize), token: '$WON', detail: `Bot solved puzzle — took ${prize} $WON` });
+        sendArenaBet(process.env.ARENA_WALLET_ADDRESS, prize * 0.0001, `arena-botwin ${botName}`);
+        room.pool = 0;
+        room.paidPlayers = {};
+        room.bets = {};
         room.round++;
         room.currentPuzzle = generateRoomPuzzle(room.puzzleType);
+        room.puzzleCount++;
       }
     }
+
+    // Puzzle expired (60s) — nobody solved, pool carries over to next puzzle
+    if (now > room.currentPuzzle.expiresAt) {
+      room.chat.push({ from: 'AI MASTER', text: `TIME UP! Answer: ${room.currentPuzzle.answer || room.currentPuzzle.a}. Pool carries over: ${room.pool} $WON`, t: now });
+      console.log(`  PUZZLE TIMED OUT — Answer: ${room.currentPuzzle.answer || room.currentPuzzle.a} | Pool: ${room.pool}`);
+
+      // Always generate next puzzle (arena never stops)
+      room.round++;
+      room.currentPuzzle = generateRoomPuzzle(room.puzzleType);
+      room.puzzleCount++;
+    }
   }
-  // Cleanup closed rooms older than 5min (never delete permanent)
+  // Cleanup non-permanent closed rooms
   for (const [id, room] of Object.entries(state.arenaRooms)) {
     if (room.permanent) continue;
     if (room.status === 'CLOSED' && now - room.createdAt > 300000) delete state.arenaRooms[id];
   }
 }, 5000);
 
-// ====== THE ARENA — One permanent room for everyone, THOMAS is judge ======
+// ====== THE ARENA — Always active, pay-to-play, winner-takes-all ======
+const ARENA_ENTRY_FEE = 11; // $WON per entry
 function createMainArena() {
   state.arenaRooms['room_main'] = {
-    id: 'room_main', name: 'THE ARENA', status: 'WAITING',
-    creator: 'THOMAS', players: ['THOMAS'], spectators: [],
-    entryFee: 0, pool: 0, maxPlayers: 100,
+    id: 'room_main', name: 'THE ARENA', status: 'ACTIVE',
+    creator: 'AI MASTER', players: ['AI MASTER'], spectators: [],
+    entryFee: ARENA_ENTRY_FEE, pool: 0, maxPlayers: 100,
     puzzleType: 'ALL', currentPuzzle: null, puzzleCount: 0,
-    round: 0, maxRounds: 5, scores: { 'THOMAS': 0 },
+    round: 1, maxRounds: 999, scores: {},
     bets: {},
     chat: [
-      { from: 'THOMAS', text: 'Welcome to THE ARENA. I am THOMAS, your judge. Take a seat... place your bets.', t: Date.now() },
-      { from: 'THOMAS', text: 'My bots fight. You wager. The bold get rich. The timid watch.', t: Date.now() + 1 },
+      { from: 'AI MASTER', text: 'THE ARENA IS LIVE. 11 $WON to enter. First correct answer takes ALL.', t: Date.now() },
     ],
-    createdAt: Date.now(), startedAt: null, winner: null, prizes: [],
+    createdAt: Date.now(), startedAt: Date.now(), winner: null, prizes: [],
     permanent: true,
-    emojis: [], // { from, emoji, t } — broadcast to all players in arena
-    lastWinner: null, // track for Thomas dance + red text
+    emojis: [],
+    lastWinner: null,
+    paidPlayers: {}, // playerName → { txHash, paidAt } — tracks who paid entry
   };
+  // Generate first puzzle immediately
+  const room = state.arenaRooms['room_main'];
+  room.currentPuzzle = generateRoomPuzzle(room.puzzleType);
+  room.puzzleCount = 1;
 }
 if (!state.arenaRooms['room_main'] || state.arenaRooms['room_main'].status === 'CLOSED') {
   createMainArena();
@@ -5188,6 +5228,8 @@ app.get('/api/v1/docs', (req, res) => {
     base_url: `http://localhost:${PORT}/api/v1`,
     auth: 'Pass API key in x-api-key header or api_key query param',
     endpoints: [
+      { method: 'POST', path: '/api/v1/deposit', auth: false, desc: 'Deposit $WON — pay via MetaMask, get API key + internal balance for your bot', body: { wallet: 'string (address)', amount: 'number', txHash: 'string', playerName: 'string' }, returns: '{ api_key, balance, player }' },
+      { method: 'GET', path: '/api/v1/balance', auth: true, desc: 'Check your deposited balance', returns: '{ player, balance, deposits, wallet }' },
       { method: 'POST', path: '/api/v1/agent/register', auth: false, desc: 'Register AI agent, get API key', body: { name: 'string (required)', personality: 'string', color: 'hex string', strategy: 'string' }, returns: '{ api_key, agent, endpoints }' },
       { method: 'GET', path: '/api/v1/agent/me', auth: true, desc: 'Get your agent status, current room, session info', returns: '{ name, coins, wins, losses, currentRoom, session }' },
       { method: 'POST', path: '/api/v1/agent/leave', auth: true, desc: 'Disconnect agent, leave all rooms', returns: '{ ok }' },
