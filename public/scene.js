@@ -5672,7 +5672,7 @@ async function connectWallet() {
     await _finalizeWalletConnect(accounts[0], false);
   } catch (err) {
     console.error('Wallet connect failed:', err);
-    showMsg('Wallet connection failed');
+    showMsg('Log in to MetaMask first, then click CONNECT WALLET');
   }
 }
 
