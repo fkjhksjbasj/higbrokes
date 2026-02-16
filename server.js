@@ -307,6 +307,7 @@ Generate your response as JSON now.`;
 }
 
 const app = express();
+app.set('trust proxy', 1); // Railway/Render reverse proxy — correct req.protocol to https
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
