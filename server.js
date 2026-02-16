@@ -3670,9 +3670,11 @@ function finishChallenge(challenge, winner) {
   } else if (loser === 'YOU') {
     recordLongTermMemory('PLAYER_LOSS', `Lost to ${winner}`, 'negative');
   }
-  // Buy $WON on nad.fun for win payout
+  // Buy $WON on nad.fun for win payout — only log if real tx hash
   sendArenaBet(process.env.ARENA_WALLET_ADDRESS, totalPot, `win-payout ${winner}`).then(hash => {
-    logActivity({ type: 'CHALLENGE_WIN', agent: winner, action: 'WIN', amount: String(totalPot), token: '$WON', hash: hash || null, detail: `${challenge.type} vs ${loser}` });
+    if (hash) {
+      logActivity({ type: 'CHALLENGE_WIN', agent: winner, action: 'WIN', amount: String(totalPot), token: '$WON', hash, detail: `${challenge.type} vs ${loser}` });
+    }
   });
 
   // Auto-unlock premium characters for winner
@@ -3992,10 +3994,12 @@ function ensureOpenChallenges() {
       gameData: null,
     };
     state.challenges.push(ch);
-    // Buy $WON on nad.fun for challenge creation
+    // Buy $WON on nad.fun for challenge creation — only log if real tx hash
     sendArenaBet(process.env.ARENA_WALLET_ADDRESS, bet, `challenge-create ${creator}`).then(hash => {
-      if (hash) ch.txHash = hash;
-      logActivity({ type: 'CHALLENGE_CREATE', agent: creator, action: 'CHALLENGE', amount: String(bet), token: '$WON', hash: hash || null, detail: ch.type });
+      if (hash) {
+        ch.txHash = hash;
+        logActivity({ type: 'CHALLENGE_CREATE', agent: creator, action: 'CHALLENGE', amount: String(bet), token: '$WON', hash, detail: ch.type });
+      }
     });
 
     // Auto-expire stale OPEN challenges after 90s — will be recreated
@@ -4042,10 +4046,12 @@ setInterval(() => {
 
   ch.gameData = initChallengeData(creator, opponent, type);
   state.challenges.push(ch);
-  // Buy $WON on nad.fun for AI vs AI match
+  // Buy $WON on nad.fun for AI vs AI match — only log if real tx hash
   sendArenaBet(process.env.ARENA_WALLET_ADDRESS, bet * 2, `match ${creator} vs ${opponent}`).then(hash => {
-    if (hash) ch.txHash = hash;
-    logActivity({ type: 'CHALLENGE_ACCEPT', agent: opponent, action: 'ACCEPT', amount: String(bet), token: '$WON', hash: hash || null, detail: `${type} vs ${creator}` });
+    if (hash) {
+      ch.txHash = hash;
+      logActivity({ type: 'CHALLENGE_ACCEPT', agent: opponent, action: 'ACCEPT', amount: String(bet), token: '$WON', hash, detail: `${type} vs ${creator}` });
+    }
   });
   startChallengeTick(ch);
 
@@ -4166,20 +4172,22 @@ setInterval(() => {
     const service = sellerPersonality?.service || 'TEA';
     const cost = sellerPersonality?.serviceCost || 400;
 
-    // Real on-chain $WON buy — delay 3s to avoid nonce collision with challenge txs
+    // Real on-chain $WON buy — only log if real tx hash
     setTimeout(() => {
       sendArenaBet(process.env.ARENA_WALLET_ADDRESS, cost * 0.001, `npc-service ${buyer}->${seller}`).then(hash => {
         const social = state.npcSocial[seller];
         if (social) { social.teaCount++; social.visitCount++; }
-        logActivity({
-          type: 'NPC_SERVICE',
-          agent: buyer,
-          action: service,
-          amount: String(cost),
-          token: '$WON',
-          detail: `${buyer} bought ${service} from ${seller}`,
-          hash: hash || null,
-        });
+        if (hash) {
+          logActivity({
+            type: 'NPC_SERVICE',
+            agent: buyer,
+            action: service,
+            amount: String(cost),
+            token: '$WON',
+            detail: `${buyer} bought ${service} from ${seller}`,
+            hash,
+          });
+        }
       });
     }, 3000);
   }
@@ -5114,12 +5122,14 @@ app.post('/api/v1/visitor/ping', (req, res) => {
 
   setTimeout(() => {
     sendArenaBet(process.env.ARENA_WALLET_ADDRESS, 0.001, `visitor-trigger ${buyer}->${seller}`).then(hash => {
-      logActivity({
-        type: 'NPC_SERVICE', agent: buyer, action: service,
-        amount: '1', token: '$WON',
-        detail: `${buyer} bought ${service} from ${seller} (visitor triggered)`,
-        hash: hash || null,
-      });
+      if (hash) {
+        logActivity({
+          type: 'NPC_SERVICE', agent: buyer, action: service,
+          amount: '1', token: '$WON',
+          detail: `${buyer} bought ${service} from ${seller} (visitor triggered)`,
+          hash,
+        });
+      }
     });
   }, 1500);
   res.json({ ok: true, queued: true, message: `${buyer} is buying ${service} from ${seller}` });
