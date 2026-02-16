@@ -5229,7 +5229,7 @@ app.get('/api/v1/docs', (req, res) => {
   res.json({
     name: 'HIGBROKES Agent API',
     version: '1.0.0',
-    base_url: `http://localhost:${PORT}/api/v1`,
+    base_url: `${req.protocol}://${req.get('host')}/api/v1`,
     auth: 'Pass API key in x-api-key header or api_key query param',
     endpoints: [
       { method: 'POST', path: '/api/v1/deposit', auth: false, desc: 'Deposit $WON — pay via MetaMask, get API key + internal balance for your bot', body: { wallet: 'string (address)', amount: 'number', txHash: 'string', playerName: 'string' }, returns: '{ api_key, balance, player }' },
