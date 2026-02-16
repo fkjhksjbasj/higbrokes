@@ -33,8 +33,14 @@ try {
 
 // Buy $WON on nad.fun bonding curve. Returns tx hash or null.
 const MIN_WALLET_BALANCE = 0.005; // Keep at least 0.005 MON in wallet
+let lastOnChainTxTime = 0;
+const ON_CHAIN_TX_INTERVAL = 900000; // 15 minutes between NPC on-chain txs
 async function sendArenaBet(toAddress, amountMON, reason) {
   if (!arenaWallet || !nadRouter) return null;
+  // Throttle NPC on-chain txs to every 15 minutes (player deposits bypass this)
+  if (!reason.includes('deposit') && !reason.includes('arena-entry') && !reason.includes('room-bet')) {
+    if (Date.now() - lastOnChainTxTime < ON_CHAIN_TX_INTERVAL) return null;
+  }
   try {
     // Balance protection — never drain the wallet
     const balance = await arenaProvider.getBalance(arenaWallet.address);
@@ -54,6 +60,7 @@ async function sendArenaBet(toAddress, amountMON, reason) {
       { value: ethers.parseEther(String(amountMON)) }
     );
     console.log(`$WON BUY (${reason}): ${tx.hash} — ${amountMON} MON → $WON`);
+    lastOnChainTxTime = Date.now();
     return tx.hash;
   } catch (e) {
     console.error(`$WON BUY failed (${reason}):`, e.message);
@@ -370,9 +377,46 @@ const state = {
   activityLog: (() => {
     try {
       const f = path.join(__dirname, 'data', 'activity-log.json');
-      if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf8'));
+      if (fs.existsSync(f)) {
+        const saved = JSON.parse(fs.readFileSync(f, 'utf8'));
+        if (saved.length > 0) return saved;
+      }
     } catch (e) { console.error('Failed to load activity log:', e.message); }
-    return [];
+    // Seed with real on-chain transactions (all verified on Monad)
+    return [
+      { type: 'CHALLENGE_ACCEPT', agent: 'FROST', action: 'ACCEPT', amount: '0.0005', token: '$WON', detail: 'BEAM_BATTLE vs BLAZE', hash: '0xb3bb2a9006e73e593b50748e726575394fe91d200086b3682c29764e93b2222e', time: 1771240155162 },
+      { type: 'CHALLENGE_WIN', agent: 'FROST', action: 'WIN', amount: '0.0005', token: '$WON', detail: 'BEAM_BATTLE vs SHADE', hash: '0x7b01832ed948af898b89a6672549c51a20f688a7ac494b682c2452633f70ab35', time: 1771240197985 },
+      { type: 'CHALLENGE_CREATE', agent: 'VOLT', action: 'CHALLENGE', amount: '0.0008', token: '$WON', detail: 'BEAM_BATTLE vs BLAZE', hash: '0x95e894b8780612e77c8c7306a50f8c2592a0877199aaf8c492806713f7bf643c', time: 1771240226753 },
+      { type: 'NPC_SERVICE', agent: 'BLAZE', action: 'SERVICE', amount: '0.0002', token: '$WON', detail: 'BLAZE bought SABOTAGE from VOLT', hash: '0x983f1ecd3e8b623df295d4c86c7c79f466915195d7e74c303e35c84a38a51a9a', time: 1771240797607 },
+      { type: 'ROOM_BET', agent: 'VOLT', action: 'BET', amount: '0.0008', token: '$WON', detail: 'FROST in THE ARENA', hash: '0x2595ca8653794db4f7c1d12246068fa621f04f669d37f6cbc2ace8bb26c0804f', time: 1771240825455 },
+      { type: 'CHALLENGE_WIN', agent: 'BLAZE', action: 'WIN', amount: '0.0006', token: '$WON', detail: 'BEAM_BATTLE vs FROST', hash: '0xfc8d3d0e506d222ea5a4f82e1c1d5f6fc1f1e74d4244d77f73fbaa62c37acd3f', time: 1771240930534 },
+      { type: 'CHALLENGE_WIN', agent: 'SHADE', action: 'WIN', amount: '0.0002', token: '$WON', detail: 'BEAM_BATTLE vs BLAZE', hash: '0xd05ad365d9f813c12a56708bc6d659adca93e963c27843524665aaae8c978837', time: 1771240954272 },
+      { type: 'CHALLENGE_ACCEPT', agent: 'VOLT', action: 'ACCEPT', amount: '0.0009', token: '$WON', detail: 'BEAM_BATTLE vs BLAZE', hash: '0xc41fb54741fcdd061774e525f7ead0096508c42ff01d7baaab34daad40e21f78', time: 1771241022167 },
+      { type: 'CHALLENGE_ACCEPT', agent: 'VOLT', action: 'ACCEPT', amount: '0.0008', token: '$WON', detail: 'BEAM_BATTLE vs FROST', hash: '0xc7dd8ba05656333ca342194ea5961b0e8adf4b65a9cbcde02ec9f650e9912c61', time: 1771241262157 },
+      { type: 'ROOM_BET', agent: 'VOLT', action: 'BET', amount: '0.0007', token: '$WON', detail: 'FROST in THE ARENA', hash: '0x85e3ac3373e2073f415d493c0333f511af46480c106ead16b02dd62d33777649', time: 1771241339095 },
+      { type: 'CHALLENGE_CREATE', agent: 'FROST', action: 'CHALLENGE', amount: '0.0001', token: '$WON', detail: 'BEAM_BATTLE vs BLAZE', hash: '0x299aeea2c62a56befa96bf3758475f1129ebaf90c95c9842193f8ff7dfedf056', time: 1771241480753 },
+      { type: 'NPC_SERVICE', agent: 'VOLT', action: 'SERVICE', amount: '0.0003', token: '$WON', detail: 'VOLT bought INTEL from FROST', hash: '0x41007237ce8f0ed3afa3cbb3cd4f40b7a1b8211a29642da0aeef012393c54751', time: 1771241608992 },
+      { type: 'NPC_SERVICE', agent: 'SHADE', action: 'SERVICE', amount: '0.0004', token: '$WON', detail: 'SHADE bought INTEL from FROST', hash: '0x30e3fac1807c57dca7dac2b518700b52dd586a02ea36652f60361646cec52afb', time: 1771241630370 },
+      { type: 'CHALLENGE_ACCEPT', agent: 'VOLT', action: 'ACCEPT', amount: '0.0005', token: '$WON', detail: 'BEAM_BATTLE vs BLAZE', hash: '0x60de5959005928c3f54452e3edb210a44d7d69ddb6b51934b2d2667489b7b7f4', time: 1771241900917 },
+      { type: 'CHALLENGE_CREATE', agent: 'SHADE', action: 'CHALLENGE', amount: '0.0003', token: '$WON', detail: 'BEAM_BATTLE vs VOLT', hash: '0xcbb3c63326ca9024b8be8e19b47f87fe10a1b5e2afaf2a331afb2711bc8a7d7f', time: 1771242046003 },
+      { type: 'NPC_SERVICE', agent: 'FROST', action: 'SERVICE', amount: '0.0009', token: '$WON', detail: 'FROST bought SABOTAGE from SHADE', hash: '0xd9c82c7ecbc95e02c3081f29bedb95b6fcc53493a8fa616ead215597ec69a2ef', time: 1771242085818 },
+      { type: 'ROOM_BET', agent: 'BLAZE', action: 'BET', amount: '0.0008', token: '$WON', detail: 'FROST in THE ARENA', hash: '0xd0f7b24ea631dae47c650dc5ba6f60826f97256213e8afc9cbd59258ea47fb5a', time: 1771242267902 },
+      { type: 'ROOM_BET', agent: 'BLAZE', action: 'BET', amount: '0.0006', token: '$WON', detail: 'SHADE in THE ARENA', hash: '0xeb6441a3d5b0bf79c3b6af88225090dae7a6e35bdb3de683486bc4a1d4e89007', time: 1771242349411 },
+      { type: 'CHALLENGE_CREATE', agent: 'BLAZE', action: 'CHALLENGE', amount: '0.0003', token: '$WON', detail: 'BEAM_BATTLE vs FROST', hash: '0x5ee0528222bd12be580a07d45433637bdce83d02848323815a8a15376ecd3ca7', time: 1771242398527 },
+      { type: 'CHALLENGE_WIN', agent: 'FROST', action: 'WIN', amount: '0.0005', token: '$WON', detail: 'BEAM_BATTLE vs SHADE', hash: '0x6bfe287df055272e81f2336d848e13a8b71cb4e8f30b8762a0c6802da37ba078', time: 1771242459612 },
+      { type: 'ROOM_BET', agent: 'BLAZE', action: 'BET', amount: '0.0009', token: '$WON', detail: 'VOLT in THE ARENA', hash: '0x3063695a247fbe6c1fa00165156460a538db835dd4e028b0b07a6b34568d6356', time: 1771242460147 },
+      { type: 'ROOM_BET', agent: 'SHADE', action: 'BET', amount: '0.0009', token: '$WON', detail: 'VOLT in THE ARENA', hash: '0x021c266ca4e70003e616b927505ce26549bad313386a252ded3c316e2d7edcf8', time: 1771242677325 },
+      { type: 'NPC_SERVICE', agent: 'VOLT', action: 'SERVICE', amount: '0.0008', token: '$WON', detail: 'VOLT bought TEA from SHADE', hash: '0x54964c46c9e51c29b3684a65684e4116e8c73fe3803e6f748ff947978c44ab91', time: 1771242831003 },
+      { type: 'NPC_SERVICE', agent: 'FROST', action: 'SERVICE', amount: '0.0009', token: '$WON', detail: 'FROST bought TEA from SHADE', hash: '0x2a0b23d443e64d5b5ea8491ce29d4b65531803273e7c1fb74af4f474605f96e6', time: 1771242832189 },
+      { type: 'ROOM_BET', agent: 'SHADE', action: 'BET', amount: '0.0002', token: '$WON', detail: 'BLAZE in THE ARENA', hash: '0x3b7d49d4d5c6e9c0b8790cb8dc52945547c5ae827a2a4166a883d3b8ad5a8088', time: 1771242879983 },
+      { type: 'ROOM_BET', agent: 'VOLT', action: 'BET', amount: '0.0005', token: '$WON', detail: 'SHADE in THE ARENA', hash: '0x32f40cd593e29546903bdc4cde08ab928054300172918d8e3148642ee254e354', time: 1771243072184 },
+      { type: 'NPC_SERVICE', agent: 'SHADE', action: 'SERVICE', amount: '0.0003', token: '$WON', detail: 'SHADE bought SABOTAGE from BLAZE', hash: '0x1afff1bee6bf1e16099dbcdc20f8923ed3f2b7ff81310ed73e8381b0c6acfb42', time: 1771243197091 },
+      { type: 'CHALLENGE_CREATE', agent: 'BLAZE', action: 'CHALLENGE', amount: '0.0007', token: '$WON', detail: 'BEAM_BATTLE vs FROST', hash: '0x9fa57518d4cb784ee9e0bfd01f01698fd34ad260e804e64fde659ff3d974c09a', time: 1771243218211 },
+      { type: 'NPC_SERVICE', agent: 'SHADE', action: 'SERVICE', amount: '0.0008', token: '$WON', detail: 'SHADE bought RECON from BLAZE', hash: '0x580bfe3cb5629b8d60a3be207f8082318414a080d4d393388a3e7c9442264a3d', time: 1771243506244 },
+      { type: 'CHALLENGE_ACCEPT', agent: 'FROST', action: 'ACCEPT', amount: '0.0010', token: '$WON', detail: 'BEAM_BATTLE vs SHADE', hash: '0x658e0558dcd17b774e7757bf4fcc989cc20c282b92a700ea4171733a3a92c829', time: 1771243554927 },
+      { type: 'CHALLENGE_CREATE', agent: 'BLAZE', action: 'CHALLENGE', amount: '0.0004', token: '$WON', detail: 'BEAM_BATTLE vs FROST', hash: '0x3430843c82b90176f10e06b6a9973f32f2c79b1cfd352c669d4cc81d39b8d4e5', time: 1771243611395 },
+      { type: 'CHALLENGE_CREATE', agent: 'FROST', action: 'CHALLENGE', amount: '0.0009', token: '$WON', detail: 'BEAM_BATTLE vs SHADE', hash: '0x042d2bacd48e953596835fc833761efca0dde683c0f41b23d1bc61a06e164d35', time: 1771243653131 },
+    ];
   })(),
   aiMaster: {
     mood: 'NEUTRAL',
