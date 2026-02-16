@@ -481,6 +481,10 @@ setInterval(() => {
   }
 }, 5000);
 
+// ====== Ensure data/ directory exists (not in git, must create at runtime) ======
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
 // ====== ACTIVITY LOG — persisted to data/activity-log.json ======
 const ACTIVITY_LOG_PATH = path.join(__dirname, 'data', 'activity-log.json');
 let _activitySaveTimer = null;
